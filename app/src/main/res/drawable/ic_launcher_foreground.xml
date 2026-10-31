@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Shield Outline / Base (Safe area 21-87, center 54,54) -->
+    <path
+        android:fillColor="#10B981"
+        android:pathData="M54,26 C40,26 31,31 31,43 C31,64 45,77 54,82 C63,77 77,64 77,43 C77,31 68,26 54,26 Z" />
+
+    <!-- Inner Shield Accent -->
+    <path
+        android:fillColor="#047857"
+        android:pathData="M54,29 C42,29 34,33 34,44 C34,62 46,74 54,78.5 C62,74 74,62 74,44 C74,33 66,29 54,29 Z" />
+
+    <!-- Aero Wave 1 (Upper Wind Stream) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M40,43 C44,40 50,40 54,43 C58,46 64,46 68,43 C69,42.2 67.8,40.8 66.8,41.2 C63.5,43.5 58.5,43.5 55.2,41.2 C51.2,38.2 44.5,38.8 40,41.5 Z" />
+
+    <!-- Aero Wave 2 (Middle Wind Stream) -->
+    <path
+        android:fillColor="#E0F2FE"
+        android:pathData="M38,51 C43,47.5 51,47.5 56,51 C61,54.5 67,54 70,51.5 C70.8,50.8 69.8,49.5 68.8,50 C65.5,52 61,51.8 57.5,49.2 C52.5,45.5 44.5,45.8 38,49.8 Z" />
+
+    <!-- Pure Leaf Symbol inside -->
+    <path
+        android:fillColor="#34D399"
+        android:pathData="M54,56 C47,56 43,62 45,67 C48,72 58,72 63,65 C63,60 59,56 54,56 Z" />
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="1.2"
+        android:strokeLineCap="round"
+        android:pathData="M47,67 C52,64 57,61 61,58" />
+</vector>

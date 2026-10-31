@@ -1,0 +1,2804 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AeroGuard - Local Air Quality Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+            -webkit-tap-highlight-color: transparent;
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1; 
+            border-radius: 4px;
+        }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        aqi: {
+                            good: '#10b981',
+                            satisfactory: '#f59e0b',
+                            moderate: '#f97316',
+                            poor: '#ef4444',
+                            severe: '#8b5cf6',
+                            hazardous: '#831843'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="text-slate-800 antialiased min-h-screen flex flex-col pb-12">
+
+    <!-- Top Bar -->
+    <nav class="bg-white shadow-sm border-b border-slate-200 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 items-center">
+                <div class="flex items-center space-x-2">
+                    <div class="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
+                        <i class="ph-bold ph-wind text-2xl"></i>
+                    </div>
+                    <div>
+                        <span class="font-bold text-lg tracking-tight text-slate-900 block leading-tight">AeroGuard</span>
+                        <span class="text-xs text-slate-500 font-medium">Pan-India Air Intelligence</span>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <!-- Pan-India City Selector -->
+                    <div class="flex items-center text-xs font-semibold text-slate-700 bg-slate-100 pl-2.5 pr-1.5 py-1 rounded-full border border-slate-200">
+                        <i class="ph-fill ph-map-pin text-red-500 mr-1 text-sm"></i>
+                        <select id="panIndiaCitySelect" onchange="onCitySelected(this.value)" class="bg-transparent text-xs font-bold text-slate-800 outline-none cursor-pointer pr-1">
+                            <optgroup label="Central India">
+                                <option value="durg_core" selected>Durg, CG (AQI 142)</option>
+                                <option value="bhilai_city">Bhilai Steel City, CG (AQI 168)</option>
+                                <option value="raipur_cap">Raipur, CG (AQI 155)</option>
+                                <option value="bilaspur_cg">Bilaspur, CG (AQI 136)</option>
+                                <option value="korba_cg">Korba, CG (AQI 185)</option>
+                                <option value="bhopal_mp">Bhopal, MP (AQI 124)</option>
+                                <option value="indore_mp">Indore, MP (AQI 138)</option>
+                                <option value="gwalior_mp">Gwalior, MP (AQI 172)</option>
+                            </optgroup>
+                            <optgroup label="Northern India (NCR & Plains)">
+                                <option value="delhi_anand_vihar">New Delhi NCR (AQI 245)</option>
+                                <option value="noida_up">Noida, UP (AQI 232)</option>
+                                <option value="gurugram_hr">Gurugram, HR (AQI 218)</option>
+                                <option value="lucknow_up">Lucknow, UP (AQI 204)</option>
+                                <option value="kanpur_up">Kanpur, UP (AQI 215)</option>
+                                <option value="varanasi_up">Varanasi, UP (AQI 186)</option>
+                                <option value="jaipur_rj">Jaipur, RJ (AQI 174)</option>
+                                <option value="chandigarh_ut">Chandigarh (AQI 112)</option>
+                                <option value="ludhiana_pb">Ludhiana, PB (AQI 168)</option>
+                                <option value="amritsar_pb">Amritsar, PB (AQI 144)</option>
+                                <option value="dehradun_uk">Dehradun, UK (AQI 86)</option>
+                                <option value="srinagar_jk">Srinagar, J&K (AQI 52)</option>
+                            </optgroup>
+                            <optgroup label="Western India">
+                                <option value="mumbai_metro">Mumbai, MH (AQI 118)</option>
+                                <option value="pune_mh">Pune, MH (AQI 92)</option>
+                                <option value="nagpur_mh">Nagpur, MH (AQI 88)</option>
+                                <option value="ahmedabad_gj">Ahmedabad, GJ (AQI 162)</option>
+                                <option value="surat_gj">Surat, GJ (AQI 128)</option>
+                            </optgroup>
+                            <optgroup label="Southern India">
+                                <option value="bengaluru_tech">Bengaluru, KA (AQI 68)</option>
+                                <option value="chennai_tn">Chennai, TN (AQI 76)</option>
+                                <option value="hyderabad_tg">Hyderabad, TG (AQI 134)</option>
+                                <option value="visakhapatnam_ap">Visakhapatnam, AP (AQI 102)</option>
+                                <option value="kochi_kl">Kochi, KL (AQI 48)</option>
+                            </optgroup>
+                            <optgroup label="Eastern & North-East India">
+                                <option value="kolkata_wb">Kolkata, WB (AQI 156)</option>
+                                <option value="patna_br">Patna, BR (AQI 228)</option>
+                                <option value="bhubaneswar_od">Bhubaneswar, OD (AQI 98)</option>
+                                <option value="ranchi_jh">Ranchi, JH (AQI 122)</option>
+                                <option value="guwahati_as">Guwahati, AS (AQI 82)</option>
+                            </optgroup>
+                        </select>
+                    </div>
+                    <button onclick="refreshData()" class="p-2 rounded-full hover:bg-slate-100 text-slate-600 transition-colors" title="Refresh">
+                        <i class="ph ph-arrows-clockwise text-lg"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full">
+        
+        <!-- Header -->
+        <div class="mb-4 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2">
+            <div>
+                <h1 id="mainCityTitle" class="text-xl sm:text-2xl font-bold text-slate-900">Durg, Chhattisgarh Air Quality</h1>
+                <p id="mainCitySubText" class="text-slate-500 text-sm mt-0.5">CECB Regional Monitoring Station • Padmanabhpur & G.E. Road Corridor</p>
+            </div>
+            <div class="text-xs text-slate-500 flex items-center">
+                <i class="ph ph-clock mr-1 text-slate-400"></i> Last updated: <span id="lastUpdated" class="ml-1 font-semibold text-slate-700">Just now</span>
+            </div>
+        </div>
+
+        <!-- Smart Window Indicator in Header -->
+        <div id="smartWindowHeaderBar" class="mb-4 p-4 bg-amber-50/80 border border-amber-200 rounded-2xl shadow-sm flex flex-col gap-3.5">
+            <!-- Upper row: Window ventilation recommendation -->
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                <div class="flex items-center space-x-3">
+                    <div id="smartWindowIconContainer" class="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+                        <i id="smartWindowIcon" class="ph-bold ph-door text-2xl"></i>
+                    </div>
+                    <div>
+                        <div class="flex items-center space-x-2">
+                            <span class="text-xs font-bold uppercase tracking-wider text-amber-900">Smart Window Indicator</span>
+                            <span id="smartWindowBadge" class="text-[10px] font-extrabold bg-amber-200 text-amber-900 px-2 py-0.5 rounded-full">CLOSE</span>
+                        </div>
+                        <h3 id="smartWindowHeadline" class="text-sm font-extrabold text-amber-950 mt-0.5">Close windows to maintain air quality</h3>
+                        <p id="smartWindowMetrics" class="text-xs text-amber-800/90 mt-0.5">
+                            Outdoor: AQI 142 • 62% RH | Indoor: AQI 45 • 49% RH (Air Purifier Active)
+                        </p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-2 w-full sm:w-auto justify-end">
+                    <button onclick="toggleSmartWindowSimulation()" id="smartWindowSimBtn" class="px-3 py-1.5 bg-white hover:bg-amber-100 text-amber-900 border border-amber-300 text-xs font-bold rounded-xl transition-colors flex items-center shadow-sm">
+                        <i class="ph-bold ph-sliders-horizontal mr-1.5 text-amber-700"></i> <span id="smartWindowSimLabel">Simulate Fresh Air</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Lower row: 'Control My Purifier' section -->
+            <div id="purifierControlRow" class="pt-3 border-t border-amber-200/70 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2.5">
+                <div class="flex items-center space-x-2.5">
+                    <div id="purifierFanIconBox" class="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center shrink-0">
+                        <i id="purifierFanIcon" class="ph-bold ph-fan text-base animate-spin" style="animation-duration: 1.5s;"></i>
+                    </div>
+                    <div>
+                        <div class="flex items-center space-x-2">
+                            <span class="text-xs font-bold text-slate-800">Control My Purifier</span>
+                            <span id="purifierPowerBadge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                ACTIVE (Auto IAQ)
+                            </span>
+                        </div>
+                        <p id="purifierSubtitle" class="text-[11px] text-slate-500 mt-0.5">
+                            Auto-purifying living space • HEPA H13 Filter: 87% • Target IAQ: &lt; 35
+                        </p>
+                    </div>
+                </div>
+
+                <div class="flex items-center space-x-2 w-full sm:w-auto justify-end">
+                    <!-- Mode toggles -->
+                    <div class="bg-white/90 p-0.5 rounded-xl border border-slate-200 flex items-center text-xs shadow-xs">
+                        <button id="btnPurifierAuto" onclick="setPurifierMode('auto')" class="px-2 py-1 font-bold rounded-lg bg-blue-600 text-white shadow-xs">Auto IAQ</button>
+                        <button id="btnPurifierTurbo" onclick="setPurifierMode('turbo')" class="px-2 py-1 font-medium rounded-lg text-slate-600 hover:text-slate-900">Turbo</button>
+                        <button id="btnPurifierSleep" onclick="setPurifierMode('sleep')" class="px-2 py-1 font-medium rounded-lg text-slate-600 hover:text-slate-900">Sleep</button>
+                    </div>
+
+                    <!-- Power Toggle Button (Mock API) -->
+                    <button id="btnPurifierPower" onclick="togglePurifierPower()" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-xs font-bold rounded-xl transition-all flex items-center shadow-sm">
+                        <i class="ph-bold ph-power mr-1 text-sm"></i> <span id="purifierPowerBtnText">Power ON</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Threshold-Based Alert System Bar (AQI > 150) -->
+        <div id="thresholdAlertBar" class="mb-6 p-3.5 bg-white border border-slate-200 rounded-2xl shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+            <div class="flex items-center space-x-3">
+                <div class="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                    <i class="ph-bold ph-bell-ringing text-xl"></i>
+                </div>
+                <div>
+                    <div class="flex items-center space-x-2">
+                        <span class="text-xs font-bold text-slate-900">AQI Threshold Alert System</span>
+                        <span class="text-[10px] font-extrabold bg-red-100 text-red-700 px-2 py-0.5 rounded-full border border-red-200">Trigger: >150 AQI</span>
+                    </div>
+                    <p class="text-[11px] text-slate-500 mt-0.5">Automated browser notification dispatch when local sensor data crosses unhealthy levels.</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-2 w-full sm:w-auto justify-end">
+                <button id="notifyPermissionBtn" onclick="toggleNotificationPermission()" class="px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition-colors flex items-center">
+                    <i class="ph-bold ph-bell mr-1.5 text-blue-600"></i> <span id="notifyBtnText">Enable Browser Alerts</span>
+                </button>
+                <button onclick="simulateSensorSpike()" class="px-3.5 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 text-xs font-bold rounded-xl transition-colors flex items-center">
+                    <i class="ph-bold ph-warning mr-1"></i> Test Alert (>150)
+                </button>
+            </div>
+        </div>
+
+        <!-- High Pollution Banner (Shown when AQI > 150) -->
+        <div id="highAqiWarningBanner" class="hidden mb-6 p-4 bg-red-50 border-2 border-red-400 rounded-2xl shadow-sm text-red-800 animate-pulse">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <div class="w-9 h-9 rounded-xl bg-red-500 text-white flex items-center justify-center shrink-0">
+                        <i class="ph-bold ph-warning-octagon text-xl"></i>
+                    </div>
+                    <div>
+                        <h4 class="text-xs font-black uppercase tracking-wide text-red-900">Health Alert: AQI Exceeded 150 Threshold</h4>
+                        <p id="highAqiWarningText" class="text-xs text-red-700 mt-0.5">Current Durg sensor indicates unhealthy particulate concentration. N95 masks mandatory outdoors.</p>
+                    </div>
+                </div>
+                <button onclick="dismissWarningBanner()" class="text-red-600 hover:text-red-900 text-xs font-bold p-1">
+                    <i class="ph-bold ph-x text-base"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Interactive Map Component (Centered on Durg) -->
+        <div class="mb-6 bg-white rounded-2xl p-5 shadow-sm border border-slate-200">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-3.5">
+                <div class="flex items-center space-x-2.5">
+                    <div class="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                        <i class="ph-bold ph-map-pin text-xl"></i>
+                    </div>
+                    <div>
+                        <h2 id="mapTitle" class="text-base font-bold text-slate-900 leading-tight">Durg Community Pollution Map</h2>
+                        <p id="mapSubtitle" class="text-xs text-slate-500 mt-0.5">Interactive pins for active crowdsourced pollution reports in Durg, CG.</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <button onclick="checkHotspotProximity()" class="px-2.5 py-1 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 text-xs font-bold rounded-xl transition-colors flex items-center" title="Check if within 500m of reported high-density pollution hotspots">
+                        <i class="ph-bold ph-crosshair mr-1 text-red-600"></i> Proximity Check (<500m)
+                    </button>
+                    <span class="text-[11px] font-bold bg-red-50 text-red-700 px-2.5 py-1 rounded-full border border-red-200 flex items-center">
+                        <span class="w-2 h-2 rounded-full bg-red-500 animate-ping mr-1.5 inline-block"></span>
+                        5 Active Pins
+                    </span>
+                    <a href="#reportForm" class="text-xs font-bold text-blue-600 hover:text-blue-700 bg-blue-50 px-3 py-1 rounded-xl border border-blue-100 transition-colors">
+                        + Report Pin
+                    </a>
+                </div>
+            </div>
+
+            <!-- Hotspot Proximity Alert Banner (< 500m) -->
+            <div id="hotspotProximityBanner" class="hidden mb-3.5 p-3.5 bg-red-100 border-2 border-red-500 rounded-xl text-red-900 shadow-md">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-2.5">
+                        <div class="w-8 h-8 rounded-lg bg-red-600 text-white flex items-center justify-center shrink-0">
+                            <i class="ph-bold ph-warning-octagon text-lg"></i>
+                        </div>
+                        <div>
+                            <h4 class="text-xs font-black uppercase tracking-wide text-red-950">🚨 Hotspot Proximity Alert (< 500m)</h4>
+                            <p id="hotspotProximityText" class="text-xs text-red-800 font-medium">You are 340m from Padmanabhpur Waste Burning. Wear N95 respirator immediately.</p>
+                        </div>
+                    </div>
+                    <button onclick="dismissProximityBanner()" class="text-red-700 hover:text-red-950 p-1 font-bold">
+                        <i class="ph-bold ph-x text-base"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- CSS & SVG-Based Stylized Map Overlay -->
+            <div class="relative w-full h-64 sm:h-72 rounded-2xl overflow-hidden bg-slate-100 border border-slate-200 select-none">
+                <!-- Floating Control Panel for Zoom & Map Layers -->
+                <div id="floatingLayerPanelContainer" class="absolute top-3 right-4 z-30 flex items-center space-x-2">
+                    <!-- Zoom In / Out Controls (+ / - buttons and percentage indicator) -->
+                    <div class="flex items-center bg-white/95 backdrop-blur-sm border border-slate-200 rounded-xl shadow-md px-1 py-0.5">
+                        <button id="btnMapZoomOut" onclick="zoomMap(-0.25)" class="w-7 h-7 flex items-center justify-center text-slate-700 hover:text-blue-600 rounded-lg hover:bg-slate-100 transition-colors" title="Zoom Out">
+                            <i class="ph-bold ph-minus text-xs"></i>
+                        </button>
+                        <button id="btnMapZoomReset" onclick="resetMapZoom()" class="px-1.5 text-[11px] font-bold text-blue-600 hover:underline" title="Reset Zoom">
+                            <span id="mapZoomLevelText">100%</span>
+                        </button>
+                        <button id="btnMapZoomIn" onclick="zoomMap(0.25)" class="w-7 h-7 flex items-center justify-center text-slate-700 hover:text-blue-600 rounded-lg hover:bg-slate-100 transition-colors" title="Zoom In">
+                            <i class="ph-bold ph-plus text-xs"></i>
+                        </button>
+                    </div>
+
+                    <!-- Layers Dropdown Container -->
+                    <div class="relative">
+                        <button id="btnToggleLayersPanel" onclick="toggleLayerControlPanel()" class="px-2.5 py-1.5 bg-white/95 backdrop-blur-sm hover:bg-white text-slate-800 border border-slate-200 text-[11px] font-bold rounded-xl shadow-md transition-all flex items-center">
+                            <i class="ph-bold ph-stack text-blue-600 mr-1.5 text-xs"></i>
+                            <span>Layers</span>
+                            <span id="activeLayersCountBadge" class="ml-1 px-1.5 py-0.2 bg-blue-100 text-blue-800 rounded-full text-[9px] font-extrabold">3/3</span>
+                            <i id="layerPanelArrow" class="ph-bold ph-caret-down ml-1 text-[10px] text-slate-400"></i>
+                        </button>
+
+                        <!-- Collapsible Layers Dropdown Card -->
+                        <div id="floatingLayersMenu" class="hidden absolute right-0 mt-1.5 p-3 bg-white/98 backdrop-blur-md rounded-2xl shadow-xl border border-slate-200 min-w-[210px] flex flex-col space-y-2 z-40">
+                            <div class="flex items-center justify-between pb-1.5 border-b border-slate-100">
+                                <span class="text-[11px] font-extrabold text-slate-800">Toggle Map Layers</span>
+                                <button onclick="toggleLayerControlPanel()" class="text-slate-400 hover:text-slate-600 text-xs">
+                                    <i class="ph-bold ph-x"></i>
+                                </button>
+                            </div>
+                            
+                            <!-- Industrial Hotspots Layer -->
+                            <label class="flex items-center justify-between cursor-pointer py-1 hover:bg-slate-50 px-1 rounded-lg transition-colors">
+                                <div class="flex items-center space-x-2">
+                                    <span class="w-2.5 h-2.5 rounded-full bg-red-600 shrink-0"></span>
+                                    <span class="text-xs font-semibold text-slate-700">Industrial Hotspots</span>
+                                </div>
+                                <input type="checkbox" id="layerChkIndustrial" checked onchange="toggleMapLayer('industrial', this.checked)" class="w-3.5 h-3.5 accent-blue-600 cursor-pointer">
+                            </label>
+
+                            <!-- Waste Burning Reports Layer -->
+                            <label class="flex items-center justify-between cursor-pointer py-1 hover:bg-slate-50 px-1 rounded-lg transition-colors">
+                                <div class="flex items-center space-x-2">
+                                    <span class="w-2.5 h-2.5 rounded-full bg-orange-600 shrink-0"></span>
+                                    <span class="text-xs font-semibold text-slate-700">Waste Burning Reports</span>
+                                </div>
+                                <input type="checkbox" id="layerChkWaste" checked onchange="toggleMapLayer('waste', this.checked)" class="w-3.5 h-3.5 accent-blue-600 cursor-pointer">
+                            </label>
+
+                            <!-- Traffic Corridors Layer -->
+                            <label class="flex items-center justify-between cursor-pointer py-1 hover:bg-slate-50 px-1 rounded-lg transition-colors">
+                                <div class="flex items-center space-x-2">
+                                    <span class="w-2.5 h-2.5 rounded-full bg-amber-500 shrink-0"></span>
+                                    <span class="text-xs font-semibold text-slate-700">Traffic Corridors</span>
+                                </div>
+                                <input type="checkbox" id="layerChkTraffic" checked onchange="toggleMapLayer('traffic', this.checked)" class="w-3.5 h-3.5 accent-blue-600 cursor-pointer">
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Zoomable Map Graphic and Pins Container -->
+                <div id="interactiveMapZoomLayer" class="absolute inset-0 w-full h-full transition-transform duration-300 origin-center">
+                    <!-- SVG Geospatial Base Layout for Durg -->
+                    <svg class="absolute inset-0 w-full h-full" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+                                <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#e2e8f0" stroke-width="0.75"/>
+                            </pattern>
+                            <!-- Radial Gradient Effects for Report Density Hotspots -->
+                            <radialGradient id="hotspotIndustrial" cx="50%" cy="50%" r="50%">
+                                <stop offset="0%" stop-color="#dc2626" stop-opacity="0.55"/>
+                                <stop offset="45%" stop-color="#ef4444" stop-opacity="0.25"/>
+                                <stop offset="100%" stop-color="#ef4444" stop-opacity="0"/>
+                            </radialGradient>
+                            <radialGradient id="hotspotPadmanabhpur" cx="50%" cy="50%" r="50%">
+                                <stop offset="0%" stop-color="#ef4444" stop-opacity="0.50"/>
+                                <stop offset="50%" stop-color="#f87171" stop-opacity="0.22"/>
+                                <stop offset="100%" stop-color="#f87171" stop-opacity="0"/>
+                            </radialGradient>
+                            <radialGradient id="hotspotTransit" cx="50%" cy="50%" r="50%">
+                                <stop offset="0%" stop-color="#f97316" stop-opacity="0.45"/>
+                                <stop offset="55%" stop-color="#fb923c" stop-opacity="0.18"/>
+                                <stop offset="100%" stop-color="#fb923c" stop-opacity="0"/>
+                            </radialGradient>
+                        </defs>
+                        <rect width="100%" height="100%" fill="url(#grid)" />
+                        
+                        <!-- Shivnath River (Winding Stream on West) -->
+                        <path d="M 60,0 C 130,90 40,160 110,320" fill="none" stroke="#93c5fd" stroke-width="22" stroke-linecap="round" opacity="0.8" />
+                        <text id="mapWaterLabel" x="35" y="24" fill="#2563eb" font-size="10" font-weight="700" opacity="0.7">Shivnath River</text>
+                        
+                        <!-- National Highway 53 (East-West Highway to Bhilai) -->
+                        <path d="M 0,135 Q 260,155 800,105" fill="none" stroke="#cbd5e1" stroke-width="12" />
+                        <path d="M 0,135 Q 260,155 800,105" fill="none" stroke="#f59e0b" stroke-width="3" stroke-dasharray="8 6" opacity="0.8" />
+                        
+                        <!-- G.E. Road Connector -->
+                        <line x1="260" y1="0" x2="230" y2="320" stroke="#cbd5e1" stroke-width="7" />
+                        
+                        <!-- Padmanabhpur Ring Road Arc -->
+                        <path d="M 120,240 A 130,90 0 0,0 360,240" fill="none" stroke="#e2e8f0" stroke-width="6" stroke-dasharray="4 4" />
+
+                        <!-- Radial Gradient Density Hotspot Overlays on SVG Layer (Layer controlled) -->
+                        <!-- Hotspot 1: Industrial Smelter Cluster (G.E. Road / Bhilai Boundary) -->
+                        <circle id="hotspotIndustrialCircle" cx="78%" cy="38%" r="68" fill="url(#hotspotIndustrial)" />
+                        <!-- Hotspot 2: Waste Burning Cluster (Padmanabhpur Ring Road) -->
+                        <circle id="hotspotPadmanabhpurCircle" cx="32%" cy="68%" r="58" fill="url(#hotspotPadmanabhpur)" />
+                        <!-- Hotspot 3: Urban Transit Plume Cluster (Durg Railway & Bus Stand) -->
+                        <circle id="hotspotTransitCircle" cx="54%" cy="52%" r="48" fill="url(#hotspotTransit)" />
+                    </svg>
+
+                    <!-- Map Overlay Labels -->
+                    <div id="mapCoordsLabel" class="absolute top-3 left-4 bg-white/90 backdrop-blur-sm px-2.5 py-1 rounded-lg border border-slate-200 text-[10px] font-bold text-slate-700 shadow-sm">
+                        Durg Urban Corridor (21.1904° N, 81.2849° E)
+                    </div>
+
+                <div id="mapHighwayLabel" class="absolute right-4 top-1/2 -translate-y-6 text-[10px] font-extrabold text-slate-400 bg-white/70 px-2 py-0.5 rounded">
+                    NH-53 to Bhilai →
+                </div>
+                <div id="mapSectorLabel" class="absolute bottom-3 left-4 text-[10px] font-semibold text-slate-500 bg-white/80 px-2 py-0.5 rounded">
+                    Padmanabhpur Sector
+                </div>
+
+                <!-- Interactive Pulsing Map Pins with Smooth Hover Scale and Tooltips -->
+                <!-- Pin 1: Padmanabhpur (Waste Burning) -->
+                <div id="mapPinEl_1" onclick="selectMapPin(1)" class="layer-waste-pin absolute cursor-pointer -translate-x-1/2 -translate-y-1/2 group transition-transform duration-200 hover:scale-125 z-20" style="left: 32%; top: 68%;">
+                    <!-- Hover Tooltip -->
+                    <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-150 flex items-center space-x-1 px-2.5 py-1 bg-slate-900/95 text-white text-[10px] font-bold rounded-lg shadow-xl whitespace-nowrap border border-slate-700 z-50">
+                        <span id="pinTipCat_1">Open Burning</span>
+                        <span class="text-slate-500">•</span>
+                        <span class="text-sky-400 flex items-center"><i class="ph-bold ph-thumbs-up mr-0.5"></i> <span id="pinTipUpvotes_1">14</span></span>
+                    </div>
+
+                    <div id="pinPulse_1" class="absolute -inset-2 bg-red-400 rounded-full animate-ping opacity-60"></div>
+                    <div class="relative w-8 h-8 rounded-full bg-red-600 text-white flex items-center justify-center shadow-lg border-2 border-white transition-all">
+                        <i class="ph-bold ph-flame text-sm"></i>
+                    </div>
+                </div>
+
+                <!-- Pin 2: G.E. Road Industrial (Industrial) -->
+                <div id="mapPinEl_2" onclick="selectMapPin(2)" class="layer-industrial-pin absolute cursor-pointer -translate-x-1/2 -translate-y-1/2 group transition-transform duration-200 hover:scale-125 z-20" style="left: 78%; top: 38%;">
+                    <!-- Hover Tooltip -->
+                    <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-150 flex items-center space-x-1 px-2.5 py-1 bg-slate-900/95 text-white text-[10px] font-bold rounded-lg shadow-xl whitespace-nowrap border border-slate-700 z-50">
+                        <span id="pinTipCat_2">Industrial</span>
+                        <span class="text-slate-500">•</span>
+                        <span class="text-sky-400 flex items-center"><i class="ph-bold ph-thumbs-up mr-0.5"></i> <span id="pinTipUpvotes_2">28</span></span>
+                    </div>
+
+                    <div id="pinPulse_2" class="absolute -inset-2 bg-red-400 rounded-full animate-ping opacity-60"></div>
+                    <div class="relative w-8 h-8 rounded-full bg-red-700 text-white flex items-center justify-center shadow-lg border-2 border-white transition-all">
+                        <i class="ph-bold ph-factory text-sm"></i>
+                    </div>
+                </div>
+
+                <!-- Pin 3: Mohan Nagar Dust (Traffic/Construction) -->
+                <div id="mapPinEl_3" onclick="selectMapPin(3)" class="layer-traffic-pin absolute cursor-pointer -translate-x-1/2 -translate-y-1/2 group transition-transform duration-200 hover:scale-125 z-20" style="left: 45%; top: 32%;">
+                    <!-- Hover Tooltip -->
+                    <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-150 flex items-center space-x-1 px-2.5 py-1 bg-slate-900/95 text-white text-[10px] font-bold rounded-lg shadow-xl whitespace-nowrap border border-slate-700 z-50">
+                        <span id="pinTipCat_3">Construction Dust</span>
+                        <span class="text-slate-500">•</span>
+                        <span class="text-sky-400 flex items-center"><i class="ph-bold ph-thumbs-up mr-0.5"></i> <span id="pinTipUpvotes_3">9</span></span>
+                    </div>
+
+                    <div id="pinPulse_3" class="hidden absolute -inset-2 bg-amber-400 rounded-full animate-ping opacity-60"></div>
+                    <div class="relative w-7 h-7 rounded-full bg-amber-500 text-white flex items-center justify-center shadow-lg border-2 border-white transition-all">
+                        <i class="ph-bold ph-truck text-xs"></i>
+                    </div>
+                </div>
+
+                <!-- Pin 4: Durg Station (Traffic/Transit) -->
+                <div id="mapPinEl_4" onclick="selectMapPin(4)" class="layer-traffic-pin absolute cursor-pointer -translate-x-1/2 -translate-y-1/2 group transition-transform duration-200 hover:scale-125 z-20" style="left: 54%; top: 52%;">
+                    <!-- Hover Tooltip -->
+                    <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-150 flex items-center space-x-1 px-2.5 py-1 bg-slate-900/95 text-white text-[10px] font-bold rounded-lg shadow-xl whitespace-nowrap border border-slate-700 z-50">
+                        <span id="pinTipCat_4">Vehicle Exhaust</span>
+                        <span class="text-slate-500">•</span>
+                        <span class="text-sky-400 flex items-center"><i class="ph-bold ph-thumbs-up mr-0.5"></i> <span id="pinTipUpvotes_4">7</span></span>
+                    </div>
+
+                    <div id="pinPulse_4" class="hidden absolute -inset-2 bg-orange-400 rounded-full animate-ping opacity-60"></div>
+                    <div class="relative w-7 h-7 rounded-full bg-orange-500 text-white flex items-center justify-center shadow-lg border-2 border-white transition-all">
+                        <i class="ph-bold ph-bus text-xs"></i>
+                    </div>
+                </div>
+
+                <!-- Pin 5: Indira Market (Waste Burning) -->
+                <div id="mapPinEl_5" onclick="selectMapPin(5)" class="layer-waste-pin absolute cursor-pointer -translate-x-1/2 -translate-y-1/2 group transition-transform duration-200 hover:scale-125 z-20" style="left: 63%; top: 62%;">
+                    <!-- Hover Tooltip -->
+                    <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-150 flex items-center space-x-1 px-2.5 py-1 bg-slate-900/95 text-white text-[10px] font-bold rounded-lg shadow-xl whitespace-nowrap border border-slate-700 z-50">
+                        <span id="pinTipCat_5">Biomass Burning</span>
+                        <span class="text-slate-500">•</span>
+                        <span class="text-sky-400 flex items-center"><i class="ph-bold ph-thumbs-up mr-0.5"></i> <span id="pinTipUpvotes_5">11</span></span>
+                    </div>
+
+                    <div id="pinPulse_5" class="hidden absolute -inset-2 bg-red-400 rounded-full animate-ping opacity-60"></div>
+                    <div class="relative w-7 h-7 rounded-full bg-red-600 text-white flex items-center justify-center shadow-lg border-2 border-white transition-all">
+                        <i class="ph-bold ph-fire text-xs"></i>
+                    </div>
+                </div>
+                <!-- End interactiveMapZoomLayer -->
+                </div>
+            </div>
+
+            <!-- Active Pin Details Card -->
+            <div id="mapPinDetailCard" class="mt-3.5 p-3.5 bg-slate-50 border border-slate-200 rounded-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                <div>
+                    <div class="flex items-center space-x-2">
+                        <span id="pinCategoryBadge" class="px-2 py-0.5 text-[10px] font-bold bg-red-100 text-red-700 rounded-full">Open Burning</span>
+                        <h4 id="pinTitleText" class="text-xs font-bold text-slate-800">Padmanabhpur Bypass Ring Road</h4>
+                        <span class="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">Verified</span>
+                    </div>
+                    <p id="pinDescText" class="text-xs text-slate-500 mt-1">Dense smoke plume billowing from waste piles near residential colonies. Visibility reduced on bypass road.</p>
+                    <span id="pinMetaText" class="text-[10px] text-slate-400 mt-1 block">35 mins ago • Reported by Aman K.</span>
+                </div>
+                <div class="flex items-center space-x-2 shrink-0">
+                    <button id="upvotePinBtn" onclick="upvoteActivePin()" class="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-semibold rounded-lg shadow-sm transition-colors flex items-center">
+                        <i class="ph-bold ph-thumbs-up mr-1 text-blue-600"></i> <span id="pinUpvoteLabel">Confirm (14)</span>
+                    </button>
+                    <a href="#reportForm" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow-sm transition-colors">
+                        Add Report
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Grid Layout -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            <!-- Main AQI Card -->
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 lg:col-span-1 flex flex-col items-center justify-center relative overflow-hidden">
+                <div class="absolute -top-10 -right-10 w-36 h-36 bg-orange-100 rounded-full blur-3xl opacity-60"></div>
+                
+                <div class="flex justify-between items-center w-full mb-4">
+                    <h2 class="text-base font-semibold text-slate-700">Current AQI</h2>
+                    <span class="text-xs font-bold text-orange-600 bg-orange-50 px-2 py-0.5 rounded border border-orange-200">Real-time</span>
+                </div>
+                
+                <!-- Circular AQI Indicator with animated Meteocon -->
+                <div class="relative flex items-center justify-center w-48 h-48 rounded-full border-8 border-orange-200">
+                    <div class="absolute inset-0 rounded-full border-8 border-orange-500 border-t-transparent animate-[spin_4s_linear_infinite]" style="animation-direction: reverse;"></div>
+                    <div class="text-center flex flex-col items-center justify-center z-10">
+                        <img id="aqiMeteoconImg" src="meteocons-svg/haze.svg" class="w-11 h-11 mb-1 object-contain" alt="Atmospheric Condition" />
+                        <span class="text-4xl font-extrabold text-orange-500" id="currentAqi">142</span>
+                        <p class="text-[10px] font-semibold text-slate-400">AQI (US)</p>
+                    </div>
+                </div>
+                
+                <div class="mt-5 text-center w-full">
+                    <span id="aqiBadge" class="inline-block px-3.5 py-1 rounded-full bg-orange-100 text-orange-800 font-bold text-xs border border-orange-200">
+                        Moderate / Poor
+                    </span>
+                    <p id="aqiSummary" class="text-xs text-slate-600 mt-2.5 px-2 leading-relaxed">
+                        Sensitive individuals should consider limiting prolonged outdoor exertion.
+                    </p>
+                </div>
+
+                <!-- Weather Strip with Meteocons -->
+                <div class="w-full grid grid-cols-3 gap-2 mt-6 pt-4 border-t border-slate-100 text-center">
+                    <div class="flex flex-col items-center">
+                        <img src="meteocons-svg/thermometer-celsius.svg" class="w-7 h-7 mb-1 object-contain" alt="Temp" />
+                        <span class="text-[10px] text-slate-400 block font-medium">Temp</span>
+                        <span class="text-sm font-bold text-slate-800">31°C</span>
+                    </div>
+                    <div class="flex flex-col items-center">
+                        <img src="meteocons-svg/humidity.svg" class="w-7 h-7 mb-1 object-contain" alt="Humidity" />
+                        <span class="text-[10px] text-slate-400 block font-medium">Humidity</span>
+                        <span class="text-sm font-bold text-slate-800">48%</span>
+                    </div>
+                    <div class="flex flex-col items-center">
+                        <img src="meteocons-svg/wind.svg" class="w-7 h-7 mb-1 object-contain" alt="Wind" />
+                        <span class="text-[10px] text-slate-400 block font-medium">Wind</span>
+                        <span class="text-sm font-bold text-slate-800">12 km/h NW</span>
+                    </div>
+                </div>
+
+                <!-- Personalized Health Advisory Card (Triggers Modal) -->
+                <div class="w-full mt-5 pt-4 border-t border-slate-100">
+                    <div onclick="openHealthModal()" class="p-3 bg-blue-50/70 hover:bg-blue-50 border border-blue-200 rounded-xl cursor-pointer transition-all flex items-center justify-between">
+                        <div class="flex items-center space-x-2.5">
+                            <div class="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center shadow-sm">
+                                <i class="ph-bold ph-sparkle text-base"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-xs font-bold text-slate-900 leading-tight">Personalized Health Advisory</h3>
+                                <p class="text-[11px] text-blue-700 mt-0.5">Simulated Gemini advice for AQI 142</p>
+                            </div>
+                        </div>
+                        <span class="text-xs font-semibold text-blue-600 flex items-center">
+                            View <i class="ph ph-arrow-right ml-1"></i>
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Detailed Pollutants Grid -->
+            <div class="lg:col-span-2 grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+                <!-- PM2.5 -->
+                <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 flex flex-col justify-between hover:shadow-md transition-shadow">
+                    <div class="flex items-center space-x-1.5">
+                        <i class="ph-fill ph-dots-nine text-orange-500 text-lg"></i>
+                        <span class="font-bold text-sm text-slate-700">PM2.5</span>
+                    </div>
+                    <div class="mt-3">
+                        <span class="text-2xl font-extrabold text-slate-900" id="valPm25">54.2</span>
+                        <span class="text-xs text-slate-400 ml-0.5">µg/m³</span>
+                    </div>
+                    <div class="w-full bg-slate-100 rounded-full h-1.5 mt-3">
+                        <div class="bg-orange-500 h-1.5 rounded-full" style="width: 65%"></div>
+                    </div>
+                    <span class="text-[10px] text-slate-400 mt-1.5 block">Safe Limit: 60 µg/m³</span>
+                </div>
+
+                <!-- PM10 -->
+                <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 flex flex-col justify-between hover:shadow-md transition-shadow">
+                    <div class="flex items-center space-x-1.5">
+                        <i class="ph-fill ph-dots-nine text-amber-500 text-lg"></i>
+                        <span class="font-bold text-sm text-slate-700">PM10</span>
+                    </div>
+                    <div class="mt-3">
+                        <span class="text-2xl font-extrabold text-slate-900" id="valPm10">112</span>
+                        <span class="text-xs text-slate-400 ml-0.5">µg/m³</span>
+                    </div>
+                    <div class="w-full bg-slate-100 rounded-full h-1.5 mt-3">
+                        <div class="bg-amber-500 h-1.5 rounded-full" style="width: 55%"></div>
+                    </div>
+                    <span class="text-[10px] text-slate-400 mt-1.5 block">Safe Limit: 100 µg/m³</span>
+                </div>
+
+                <!-- SO2 -->
+                <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 flex flex-col justify-between hover:shadow-md transition-shadow">
+                    <div class="flex items-center space-x-1.5">
+                        <i class="ph-fill ph-factory text-emerald-500 text-lg"></i>
+                        <span class="font-bold text-sm text-slate-700">SO₂</span>
+                    </div>
+                    <div class="mt-3">
+                        <span class="text-2xl font-extrabold text-slate-900" id="valSo2">12.4</span>
+                        <span class="text-xs text-slate-400 ml-0.5">µg/m³</span>
+                    </div>
+                    <div class="w-full bg-slate-100 rounded-full h-1.5 mt-3">
+                        <div class="bg-emerald-500 h-1.5 rounded-full" style="width: 20%"></div>
+                    </div>
+                    <span class="text-[10px] text-slate-400 mt-1.5 block">Bhilai Industrial belt</span>
+                </div>
+
+                <!-- NO2 -->
+                <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 flex flex-col justify-between hover:shadow-md transition-shadow">
+                    <div class="flex items-center space-x-1.5">
+                        <i class="ph-fill ph-car-profile text-emerald-500 text-lg"></i>
+                        <span class="font-bold text-sm text-slate-700">NO₂</span>
+                    </div>
+                    <div class="mt-3">
+                        <span class="text-2xl font-extrabold text-slate-900" id="valNo2">28.1</span>
+                        <span class="text-xs text-slate-400 ml-0.5">µg/m³</span>
+                    </div>
+                    <div class="w-full bg-slate-100 rounded-full h-1.5 mt-3">
+                        <div class="bg-emerald-500 h-1.5 rounded-full" style="width: 35%"></div>
+                    </div>
+                    <span class="text-[10px] text-slate-400 mt-1.5 block">Vehicular emission</span>
+                </div>
+
+                <!-- 24-Hour Forecast / 7-Day History Chart Container (Spans 4 columns) -->
+                <div class="col-span-2 sm:col-span-4 bg-white rounded-2xl p-5 shadow-sm border border-slate-200 mt-2">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-3">
+                        <div>
+                            <h2 id="chartTitleText" class="text-base font-bold text-slate-800">24-Hour AI Predictive Forecast</h2>
+                            <p id="chartSubtitleText" class="text-xs text-slate-500">Hourly AQI variation forecast for Durg urban corridor</p>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <!-- Historical Toggle -->
+                            <div class="bg-slate-100 p-1 rounded-xl flex items-center border border-slate-200">
+                                <button id="btnToggle24h" onclick="switchChartMode('24h')" class="px-2.5 py-1 text-xs font-bold rounded-lg bg-white text-slate-800 shadow-sm transition-all">
+                                    24h Forecast
+                                </button>
+                                <button id="btnToggle7d" onclick="switchChartMode('7d')" class="px-2.5 py-1 text-xs font-semibold rounded-lg text-slate-600 hover:text-slate-800 transition-all">
+                                    Past 7 Days History
+                                </button>
+                            </div>
+                            <span id="chartSourceBadge" class="hidden sm:inline-block text-[11px] font-semibold bg-blue-50 text-blue-600 px-2.5 py-1 rounded-md border border-blue-100">
+                                Powered by Local ML
+                            </span>
+                        </div>
+                    </div>
+                    <div class="w-full h-56 relative">
+                        <canvas id="forecastChart"></canvas>
+                    </div>
+                    <div class="mt-3.5 pt-3 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-2">
+                        <p id="chartFooterText" class="text-[11px] text-slate-400 text-center sm:text-left flex-grow">
+                            Prediction incorporates local weather, traffic patterns on NH-53, and Bhilai industrial shift outputs.
+                        </p>
+                        <button onclick="exportHistoricalDataCsv()" class="px-3.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs font-bold rounded-xl transition-all flex items-center shrink-0 shadow-sm" title="Download current 7-day trend as a CSV file">
+                            <i class="ph-bold ph-download-simple mr-1.5 text-blue-600"></i>
+                            Historical Data Export (CSV)
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 5-Day Pollen & Allergen Forecast Card (Complementary for Sensitive Users) -->
+            <div id="pollenForecastCard" class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 lg:col-span-3">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4">
+                    <div class="flex items-center space-x-2.5">
+                        <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                            <i class="ph-bold ph-flower-lotus text-xl"></i>
+                        </div>
+                        <div>
+                            <div class="flex items-center space-x-2">
+                                <h2 class="text-base font-bold text-slate-900 leading-tight">5-Day Pollen & Bio-Aerosol Forecast</h2>
+                                <span id="pollenCityBadge" class="text-[10px] font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded-full border border-slate-200">Durg</span>
+                            </div>
+                            <p class="text-xs text-slate-500 mt-0.5">Complementary bio-allergen tracking for allergic rhinitis, asthma & sensitive airways.</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span id="pollenTodayBadge" class="px-3 py-1 bg-amber-50 text-amber-800 border border-amber-200 text-xs font-bold rounded-xl flex items-center">
+                            <span class="w-2 h-2 rounded-full bg-amber-500 mr-1.5"></span> Today: Moderate (4/12)
+                        </span>
+                    </div>
+                </div>
+
+                <!-- 5 Day Selectors -->
+                <div id="pollenDaysGrid" class="grid grid-cols-5 gap-2.5 mb-4">
+                    <!-- Populated dynamically by JS -->
+                </div>
+
+                <!-- Selected Day Detail View -->
+                <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs font-bold text-slate-800">Allergen Breakdown (<span id="pollenSelectedDayLabel">Today</span>)</span>
+                            <span id="pollenDominantPill" class="text-[10px] font-bold bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full">Dominant: Grass & Weed</span>
+                        </div>
+                        <div class="space-y-2 text-xs">
+                            <div>
+                                <div class="flex justify-between text-slate-600 mb-1">
+                                    <span>Tree Pollen (Neem/Acacia)</span>
+                                    <span id="pollenTreeVal" class="font-bold text-emerald-700">35%</span>
+                                </div>
+                                <div class="w-full bg-slate-200 rounded-full h-1.5">
+                                    <div id="pollenTreeBar" class="bg-emerald-500 h-1.5 rounded-full" style="width: 35%"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-slate-600 mb-1">
+                                    <span>Grass Pollen (Lawn/Pasture)</span>
+                                    <span id="pollenGrassVal" class="font-bold text-amber-700">55%</span>
+                                </div>
+                                <div class="w-full bg-slate-200 rounded-full h-1.5">
+                                    <div id="pollenGrassBar" class="bg-amber-500 h-1.5 rounded-full" style="width: 55%"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-slate-600 mb-1">
+                                    <span>Weed Pollen (Parthenium)</span>
+                                    <span id="pollenWeedVal" class="font-bold text-orange-700">45%</span>
+                                </div>
+                                <div class="w-full bg-slate-200 rounded-full h-1.5">
+                                    <div id="pollenWeedBar" class="bg-orange-500 h-1.5 rounded-full" style="width: 45%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sensitive User Advisory Box -->
+                    <div class="flex flex-col justify-between p-3.5 bg-emerald-50/70 border border-emerald-200 rounded-xl">
+                        <div class="flex items-start space-x-2">
+                            <i class="ph-bold ph-shield-check text-emerald-600 text-lg mt-0.5"></i>
+                            <div>
+                                <h4 class="text-xs font-bold text-emerald-900">Sensitive User Clinical Tip</h4>
+                                <p id="pollenAdvisoryText" class="text-xs text-emerald-800 mt-1 leading-relaxed">
+                                    Moderate weed pollen detected along road corridors. Sensitive individuals should wear protective eyewear and keep windows closed during morning gusts.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="mt-2 text-[10px] text-emerald-700/80">
+                            Auto-syncs with selected city microclimates and seasonal botanical indices.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Comprehensive Historical Air Quality & Trend Analysis View -->
+            <div id="historicalDataCard" class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 lg:col-span-3">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+                    <div class="flex items-center space-x-2.5">
+                        <div class="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                            <i class="ph-bold ph-chart-line-up text-xl"></i>
+                        </div>
+                        <div>
+                            <div class="flex items-center space-x-2">
+                                <h2 class="text-base font-bold text-slate-800">Historical Air Quality & Trends</h2>
+                                <span id="historicalCityBadge" class="text-[10px] font-bold bg-blue-100 text-blue-800 px-2.5 py-0.5 rounded-full">Durg</span>
+                            </div>
+                            <p class="text-xs text-slate-500">Past readings, multi-pollutant metrics & seasonal trend shifts</p>
+                        </div>
+                    </div>
+
+                    <!-- Time Range Tabs: Week, Month, Year -->
+                    <div class="bg-slate-100 p-1 rounded-xl flex items-center border border-slate-200 self-stretch sm:self-auto">
+                        <button id="btnHistRangeWeek" onclick="switchHistoricalRange('week')" class="flex-1 sm:flex-initial px-3 py-1.5 text-xs font-bold rounded-lg bg-white text-slate-800 shadow-sm transition-all">
+                            Past Week
+                        </button>
+                        <button id="btnHistRangeMonth" onclick="switchHistoricalRange('month')" class="flex-1 sm:flex-initial px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-600 hover:text-slate-800 transition-all">
+                            Past Month
+                        </button>
+                        <button id="btnHistRangeYear" onclick="switchHistoricalRange('year')" class="flex-1 sm:flex-initial px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-600 hover:text-slate-800 transition-all">
+                            Past Year
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Pollutant Filter Chips -->
+                <div class="flex items-center space-x-2 overflow-x-auto pb-2 mb-4 scrollbar-thin">
+                    <button id="btnHistMetric_aqi" onclick="switchHistoricalMetric('aqi')" class="hist-metric-btn px-3 py-1.5 text-xs font-bold rounded-xl bg-blue-600 text-white shadow-sm transition-all whitespace-nowrap">
+                        AQI
+                    </button>
+                    <button id="btnHistMetric_pm25" onclick="switchHistoricalMetric('pm25')" class="hist-metric-btn px-3 py-1.5 text-xs font-semibold rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 transition-all whitespace-nowrap">
+                        PM2.5 (µg/m³)
+                    </button>
+                    <button id="btnHistMetric_pm10" onclick="switchHistoricalMetric('pm10')" class="hist-metric-btn px-3 py-1.5 text-xs font-semibold rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 transition-all whitespace-nowrap">
+                        PM10 (µg/m³)
+                    </button>
+                    <button id="btnHistMetric_no2" onclick="switchHistoricalMetric('no2')" class="hist-metric-btn px-3 py-1.5 text-xs font-semibold rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 transition-all whitespace-nowrap">
+                        NO₂ (µg/m³)
+                    </button>
+                    <button id="btnHistMetric_so2" onclick="switchHistoricalMetric('so2')" class="hist-metric-btn px-3 py-1.5 text-xs font-semibold rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 transition-all whitespace-nowrap">
+                        SO₂ (µg/m³)
+                    </button>
+                    <button id="btnHistMetric_co" onclick="switchHistoricalMetric('co')" class="hist-metric-btn px-3 py-1.5 text-xs font-semibold rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 transition-all whitespace-nowrap">
+                        CO (mg/m³)
+                    </button>
+                    <button id="btnHistMetric_o3" onclick="switchHistoricalMetric('o3')" class="hist-metric-btn px-3 py-1.5 text-xs font-semibold rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 transition-all whitespace-nowrap">
+                        O₃ (µg/m³)
+                    </button>
+                </div>
+
+                <!-- 4 Summary Metric Tiles -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+                    <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1">Average</span>
+                        <div class="flex items-baseline space-x-1">
+                            <span id="histAvgVal" class="text-lg font-black text-slate-800">138</span>
+                            <span id="histAvgUnit" class="text-xs text-slate-500 font-semibold"></span>
+                        </div>
+                        <span id="histAvgSub" class="text-[10px] text-slate-500 block mt-0.5 truncate">Across 7 records</span>
+                    </div>
+
+                    <div class="p-3 bg-red-50/60 border border-red-200 rounded-xl">
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-red-600 block mb-1">Peak High</span>
+                        <div class="flex items-baseline space-x-1">
+                            <span id="histPeakVal" class="text-lg font-black text-red-600">186</span>
+                            <span id="histPeakUnit" class="text-xs text-red-500 font-semibold"></span>
+                        </div>
+                        <span id="histPeakSub" class="text-[10px] text-red-700 font-medium block mt-0.5 truncate">Thu (Oct 17)</span>
+                    </div>
+
+                    <div class="p-3 bg-emerald-50/60 border border-emerald-200 rounded-xl">
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-600 block mb-1">Cleanest / Low</span>
+                        <div class="flex items-baseline space-x-1">
+                            <span id="histMinVal" class="text-lg font-black text-emerald-600">112</span>
+                            <span id="histMinUnit" class="text-xs text-emerald-500 font-semibold"></span>
+                        </div>
+                        <span id="histMinSub" class="text-[10px] text-emerald-700 font-medium block mt-0.5 truncate">Sun (Oct 20)</span>
+                    </div>
+
+                    <div class="p-3 bg-blue-50/60 border border-blue-200 rounded-xl">
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-blue-600 block mb-1">Period Trend</span>
+                        <div class="flex items-baseline space-x-1">
+                            <span id="histNetTrendVal" class="text-lg font-black text-emerald-600">-12.5%</span>
+                        </div>
+                        <span id="histNetTrendSub" class="text-[10px] text-blue-700 font-medium block mt-0.5">Improved</span>
+                    </div>
+                </div>
+
+                <!-- Line Chart Canvas Container -->
+                <div class="relative w-full h-64 bg-slate-50/50 rounded-xl border border-slate-200 p-2 mb-4">
+                    <canvas id="historicalChart"></canvas>
+                </div>
+
+                <!-- Highlighted Significant Trend Changes -->
+                <div class="mb-3">
+                    <div class="flex items-center justify-between mb-2">
+                        <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wide">Significant Trend Highlights & Anomalies</h3>
+                        <span id="histHighlightsCount" class="text-[10px] font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">2 Shifts Identified</span>
+                    </div>
+                    <div id="histHighlightsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <!-- Meteorological Analysis Footer Note -->
+                <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-start space-x-2 text-xs text-slate-600">
+                    <i class="ph-bold ph-info text-blue-600 mt-0.5 shrink-0"></i>
+                    <p id="histExpertSummaryText" class="leading-relaxed">
+                        Data reflects localized seasonal dynamics in Central India: mid-week industrial casting outputs on the Bhilai-Durg boundary, weekend freight lull, and nocturnal winter radiation trapping.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Pollution Reporting System Module -->
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 lg:col-span-1 flex flex-col">
+                <div class="flex items-center space-x-2 mb-2">
+                    <div class="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center text-red-500">
+                        <i class="ph-fill ph-warning-circle text-xl"></i>
+                    </div>
+                    <h2 class="text-base font-bold text-slate-800">Report Local Source</h2>
+                </div>
+                <p class="text-xs text-slate-500 mb-4">Help improve local accuracy by reporting visible pollution sources in Durg.</p>
+                
+                <form id="reportForm" class="flex-grow flex flex-col space-y-3.5">
+                    <div>
+                        <label for="sourceType" class="block text-xs font-semibold text-slate-700 mb-1">Source Type</label>
+                        <select id="sourceType" required class="w-full rounded-lg border-slate-300 border px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white">
+                            <option value="">Select a source...</option>
+                            <option value="fire">Open Garbage/Crop Burning</option>
+                            <option value="dust">Construction Dust</option>
+                            <option value="industrial">Industrial Emission/Smoke</option>
+                            <option value="vehicle">Heavy Vehicle Exhaust</option>
+                            <option value="brick">Brick Kiln Smoke</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label for="location" class="block text-xs font-semibold text-slate-700 mb-1">Location Details</label>
+                        <input type="text" id="location" required placeholder="E.g., Near Padmanabhpur bypass..." class="w-full rounded-lg border-slate-300 border px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+                    </div>
+
+                    <div>
+                        <label for="description" class="block text-xs font-semibold text-slate-700 mb-1">Description (Optional)</label>
+                        <textarea id="description" rows="2" placeholder="Thick black smoke visible since 2 PM." class="w-full rounded-lg border-slate-300 border px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none"></textarea>
+                    </div>
+
+                    <div class="mt-auto pt-2">
+                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-semibold py-2.5 px-4 rounded-xl transition-colors flex justify-center items-center text-xs shadow-sm shadow-blue-500/20">
+                            <i class="ph-bold ph-paper-plane-tilt mr-1.5 text-sm"></i> Submit Local Report
+                        </button>
+                    </div>
+                </form>
+                
+                <!-- Success Message -->
+                <div id="successMessage" class="hidden flex-grow flex-col items-center justify-center text-center space-y-2.5 py-6">
+                    <div class="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center">
+                        <i class="ph-fill ph-check-circle text-3xl text-emerald-600"></i>
+                    </div>
+                    <h3 class="font-bold text-slate-900 text-sm">Report Submitted</h3>
+                    <p class="text-xs text-slate-500 max-w-xs">Thank you! Your report has been recorded and integrated into regional sensors.</p>
+                    <button id="resetFormBtn" class="text-blue-600 text-xs font-semibold mt-1 hover:underline">Submit another report</button>
+                </div>
+            </div>
+
+            <!-- Recent Community Reports Feed -->
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 lg:col-span-2">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-base font-bold text-slate-800">Recent Community Reports</h2>
+                    <span class="text-xs text-slate-400">Live verified updates</span>
+                </div>
+                <div id="communityFeed" class="space-y-3">
+                    <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 flex justify-between items-start">
+                        <div>
+                            <div class="flex items-center space-x-2">
+                                <span class="px-2 py-0.5 text-[10px] font-bold bg-red-100 text-red-700 rounded-full">Open Burning</span>
+                                <span class="text-xs font-semibold text-slate-800">Near Padmanabhpur Ring Road</span>
+                            </div>
+                            <p class="text-xs text-slate-500 mt-1">Heavy pile of leaves set ablaze, thick smoke drifting into residential blocks.</p>
+                            <span class="text-[10px] text-slate-400 mt-1 block">45 mins ago • Reported by Aman K.</span>
+                        </div>
+                        <span class="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">Verified</span>
+                    </div>
+
+                    <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 flex justify-between items-start">
+                        <div>
+                            <div class="flex items-center space-x-2">
+                                <span class="px-2 py-0.5 text-[10px] font-bold bg-amber-100 text-amber-700 rounded-full">Industrial Smoke</span>
+                                <span class="text-xs font-semibold text-slate-800">G.E. Road near Bhilai-Durg Border</span>
+                            </div>
+                            <p class="text-xs text-slate-500 mt-1">Visible dark industrial plume blowing southwards during shift change.</p>
+                            <span class="text-[10px] text-slate-400 mt-1 block">3 hours ago • Reported by Pooja S.</span>
+                        </div>
+                        <span class="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">Under Review</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        function updateTime() {
+            const now = new Date();
+            const options = { hour: '2-digit', minute: '2-digit' };
+            document.getElementById('lastUpdated').textContent = now.toLocaleTimeString('en-IN', options);
+        }
+        updateTime();
+
+        let forecastChart = null;
+
+        // --- Pan-India Comprehensive Air Quality Database ---
+        const panIndiaCityData = {
+            durg_core: {
+                name: "Durg, Chhattisgarh",
+                sub: "CECB Regional Monitoring Station • Padmanabhpur & G.E. Road Corridor",
+                aqi: 142,
+                category: "Moderate / Poor",
+                categoryClass: "bg-amber-100 text-amber-800 border-amber-200",
+                summary: "Sensitive individuals should consider limiting prolonged outdoor exertion.",
+                pm25: 54.2,
+                pm10: 112.0,
+                so2: 12.4,
+                no2: 28.1,
+                co: 1.2,
+                o3: 38.0,
+                temp: 31,
+                humidity: 48,
+                wind: "12 km/h NW",
+                waterway: "Shivnath River",
+                highway: "NH-53 to Bhilai →",
+                sector: "Padmanabhpur Sector",
+                coords: "21.1904° N, 81.2849° E",
+                pins: [
+                    { id: 1, cat: "Open Burning", title: "Padmanabhpur Bypass Ring Road", desc: "Dense smoke plume billowing from waste piles near residential colonies.", meta: "35 mins ago", upvotes: 14 },
+                    { id: 2, cat: "Industrial", title: "G.E. Road near Bhilai-Durg Border", desc: "Dark industrial plume blowing southwards during shift change.", meta: "1.5 hours ago", upvotes: 28 },
+                    { id: 3, cat: "Construction Dust", title: "Mohan Nagar Overbridge", desc: "Uncovered aggregate haulers generating heavy fly-ash across junction.", meta: "2.5 hours ago", upvotes: 9 }
+                ]
+            },
+            bhilai_city: {
+                name: "Bhilai Steel City, Chhattisgarh",
+                sub: "CPCB Industrial Air Station • Civic Centre & Sector 6 Steel Township",
+                aqi: 168,
+                category: "Poor / Unhealthy",
+                categoryClass: "bg-orange-100 text-orange-800 border-orange-200",
+                summary: "Wear N95 masks outdoors. Sintering and blast furnace particulates elevated.",
+                pm25: 68.4,
+                pm10: 145.0,
+                so2: 28.5,
+                no2: 42.0,
+                co: 2.1,
+                o3: 41.0,
+                temp: 32,
+                humidity: 46,
+                wind: "10 km/h W",
+                waterway: "Tandula Canal Network",
+                highway: "G.E. Road to Raipur →",
+                sector: "Sector 6 Civic Centre",
+                coords: "21.1938° N, 81.3509° E",
+                pins: [
+                    { id: 1, cat: "Industrial", title: "Heavy Industrial Sinter Plant", desc: "Stack particulate discharge drifting across highway lanes.", meta: "20 mins ago", upvotes: 32 },
+                    { id: 2, cat: "Road Dust", title: "Nandini Road Freight Route", desc: "Unpaved road shoulders generating heavy dust clouds.", meta: "1 hour ago", upvotes: 16 }
+                ]
+            },
+            raipur_cap: {
+                name: "Raipur, Chhattisgarh",
+                sub: "CECB Regional Lab • Telibandha & Urla Industrial Corridor",
+                aqi: 155,
+                category: "Poor / Unhealthy",
+                categoryClass: "bg-orange-100 text-orange-800 border-orange-200",
+                summary: "Slight respiratory discomfort for general public during peak transit hours.",
+                pm25: 62.0,
+                pm10: 132.0,
+                so2: 18.0,
+                no2: 36.0,
+                co: 1.6,
+                o3: 35.0,
+                temp: 31,
+                humidity: 50,
+                wind: "11 km/h NW",
+                waterway: "Kharun River Basin",
+                highway: "NH-30 & Ring Road 1 →",
+                sector: "Telibandha Marine Drive",
+                coords: "21.2514° N, 81.6296° E",
+                pins: [
+                    { id: 1, cat: "Rolling Mills", title: "Urla Phase 2 Industrial Plume", desc: "Chimney emissions crossing towards Ring Road 1.", meta: "40 mins ago", upvotes: 22 },
+                    { id: 2, cat: "Traffic Exhaust", title: "Jaistambh Chowk Congestion", desc: "Heavy commercial traffic idling at central intersection.", meta: "1.5 hours ago", upvotes: 15 }
+                ]
+            },
+            delhi_anand_vihar: {
+                name: "New Delhi, Delhi NCR",
+                sub: "DPCC Continuous Station • Anand Vihar & Central Delhi Corridor",
+                aqi: 245,
+                category: "Very Poor / Severe",
+                categoryClass: "bg-red-100 text-red-800 border-red-300 animate-pulse",
+                summary: "Health alert: Serious risk of respiratory injury. Avoid outdoor exertion and seal windows.",
+                pm25: 168.5,
+                pm10: 295.0,
+                so2: 24.2,
+                no2: 78.4,
+                co: 3.8,
+                o3: 52.0,
+                temp: 26,
+                humidity: 44,
+                wind: "6 km/h NW",
+                waterway: "Yamuna River Corridor",
+                highway: "Delhi-Meerut Expressway →",
+                sector: "Anand Vihar Hub",
+                coords: "28.6139° N, 77.2090° E",
+                pins: [
+                    { id: 1, cat: "Transit", title: "Anand Vihar ISBT Terminal", desc: "Concentrated diesel exhaust from interstate bus arrivals.", meta: "15 mins ago", upvotes: 48 },
+                    { id: 2, cat: "Toxic Smoke", title: "Ghazipur Landfill Smolder", desc: "Refuse combustion sending dense chemical haze into east Delhi.", meta: "45 mins ago", upvotes: 64 },
+                    { id: 3, cat: "Traffic Exhaust", title: "ITO Junction Corridor", desc: "Peak hour vehicle gridlock causing high NO2 and CO spikes.", meta: "1 hour ago", upvotes: 31 }
+                ]
+            },
+            noida_up: {
+                name: "Noida, Uttar Pradesh (NCR)",
+                sub: "UPPCB Continuous Station • Sector 62 & Expressway Zone",
+                aqi: 232,
+                category: "Very Poor / Severe",
+                categoryClass: "bg-red-100 text-red-800 border-red-300 animate-pulse",
+                summary: "Severe particulate pollution. Keep indoor air purifiers running continuously.",
+                pm25: 154.0,
+                pm10: 275.0,
+                so2: 21.0,
+                no2: 68.0,
+                co: 3.2,
+                o3: 46.0,
+                temp: 26,
+                humidity: 45,
+                wind: "7 km/h NW",
+                waterway: "Hindon River Canal",
+                highway: "Noida-Greater Noida Expressway →",
+                sector: "Sector 62 IT Hub",
+                coords: "28.5355° N, 77.3910° E",
+                pins: [
+                    { id: 1, cat: "Construction", title: "Sector 150 High-Rise Excavation", desc: "Unscreened earth moving creating massive dust plumes.", meta: "1 hour ago", upvotes: 27 }
+                ]
+            },
+            mumbai_metro: {
+                name: "Mumbai, Maharashtra",
+                sub: "MPCB Continuous Station • Bandra-Kurla Complex (BKC) & Coastal Zone",
+                aqi: 118,
+                category: "Moderate / Poor",
+                categoryClass: "bg-amber-100 text-amber-800 border-amber-200",
+                summary: "Coastal marine haze and traffic exhaust. Moderate air quality across peninsula.",
+                pm25: 42.8,
+                pm10: 98.0,
+                so2: 18.1,
+                no2: 44.5,
+                co: 1.4,
+                o3: 28.0,
+                temp: 32,
+                humidity: 72,
+                wind: "16 km/h WSW",
+                waterway: "Arabian Sea Coast & Mithi River",
+                highway: "Western Express Highway →",
+                sector: "BKC Commercial Core",
+                coords: "19.0760° N, 72.8777° E",
+                pins: [
+                    { id: 1, cat: "Refinery Flare", title: "Chembur Mahul Corridor", desc: "Industrial sulfur dioxide and VOC plume settling in humid air.", meta: "40 mins ago", upvotes: 34 },
+                    { id: 2, cat: "Metro Haulage", title: "Andheri East Subway Line", desc: "Dumpers stirring up crushed basalt dust near WEH.", meta: "1.5 hours ago", upvotes: 21 }
+                ]
+            },
+            bengaluru_tech: {
+                name: "Bengaluru, Karnataka",
+                sub: "KSPCB Continuous Station • BTM Layout & Whitefield IT Corridor",
+                aqi: 68,
+                category: "Satisfactory",
+                categoryClass: "bg-lime-100 text-lime-800 border-lime-200",
+                summary: "Air quality is acceptable. Good conditions for outdoor walking and exercise.",
+                pm25: 22.4,
+                pm10: 54.0,
+                so2: 8.2,
+                no2: 24.0,
+                co: 0.8,
+                o3: 32.0,
+                temp: 28,
+                humidity: 58,
+                wind: "14 km/h E",
+                waterway: "Bellandur Basin & Lake Ring",
+                highway: "Outer Ring Road (ORR) →",
+                sector: "BTM & Silk Board",
+                coords: "12.9716° N, 77.5946° E",
+                pins: [
+                    { id: 1, cat: "Traffic Exhaust", title: "Central Silk Board Junction", desc: "Intersection idling creating localized fine particulate pocket.", meta: "25 mins ago", upvotes: 26 },
+                    { id: 2, cat: "Metro Dust", title: "Kadubeesanahalli ORR Line", desc: "Under-construction flyover pillar and barricade dust.", meta: "1.5 hours ago", upvotes: 15 }
+                ]
+            },
+            kolkata_wb: {
+                name: "Kolkata, West Bengal",
+                sub: "WBPCB Observatory • Victoria Memorial & Salt Lake Sector V",
+                aqi: 156,
+                category: "Poor / Unhealthy",
+                categoryClass: "bg-orange-100 text-orange-800 border-orange-200",
+                summary: "Elevated particulate matter from foundry belt across river. Sensitive groups wear masks.",
+                pm25: 64.8,
+                pm10: 138.0,
+                so2: 16.5,
+                no2: 48.0,
+                co: 1.6,
+                o3: 34.0,
+                temp: 30,
+                humidity: 64,
+                wind: "8 km/h S",
+                waterway: "Hooghly River Estuary",
+                highway: "EM Bypass & Kona Expressway →",
+                sector: "Salt Lake Sector V",
+                coords: "22.5726° N, 88.3639° E",
+                pins: [
+                    { id: 1, cat: "Foundry Smoke", title: "Howrah Ghusuri Belt", desc: "Grey particulate stack discharge crossing Hooghly river.", meta: "50 mins ago", upvotes: 38 },
+                    { id: 2, cat: "Refuse Fire", title: "East Kolkata Dhapa Mound", desc: "Smoldering garbage mounds sending smoke across EM Bypass.", meta: "1 hour ago", upvotes: 45 }
+                ]
+            },
+            patna_br: {
+                name: "Patna, Bihar",
+                sub: "BSPCB Continuous Station • Danapur & Eco Park Zone",
+                aqi: 228,
+                category: "Very Poor / Severe",
+                categoryClass: "bg-red-100 text-red-800 border-red-300 animate-pulse",
+                summary: "High concentration of fine silt and brick kiln smoke in river basin.",
+                pm25: 148.0,
+                pm10: 265.0,
+                so2: 22.0,
+                no2: 68.0,
+                co: 2.8,
+                o3: 44.0,
+                temp: 29,
+                humidity: 56,
+                wind: "5 km/h E",
+                waterway: "Ganga River Basin",
+                highway: "Bailey Road & Patna Ring Road →",
+                sector: "Danapur & Eco Park",
+                coords: "25.5941° N, 85.1376° E",
+                pins: [
+                    { id: 1, cat: "Brick Kiln", title: "Digha Ganga Diara Sandbank", desc: "Brick kilns firing unrefined coal on river islands.", meta: "30 mins ago", upvotes: 52 },
+                    { id: 2, cat: "Road Silt", title: "Boring Canal Road Dust", desc: "Unpaved river basin silt stirred up by heavy traffic.", meta: "1.5 hours ago", upvotes: 24 }
+                ]
+            },
+            hyderabad_tg: {
+                name: "Hyderabad, Telangana",
+                sub: "TSPCB Sanathnagar Station • Gachibowli IT Corridor",
+                aqi: 134,
+                category: "Moderate / Poor",
+                categoryClass: "bg-amber-100 text-amber-800 border-amber-200",
+                summary: "Moderate air quality. Chemical solvent odors reported near northern belt.",
+                pm25: 48.0,
+                pm10: 108.0,
+                so2: 14.0,
+                no2: 32.0,
+                co: 1.1,
+                o3: 36.0,
+                temp: 31,
+                humidity: 52,
+                wind: "12 km/h SE",
+                waterway: "Musi River & Hussain Sagar",
+                highway: "Nehru Outer Ring Road (ORR) →",
+                sector: "Gachibowli IT Corridor",
+                coords: "17.3850° N, 78.4867° E",
+                pins: [
+                    { id: 1, cat: "Bulk Drug", title: "Jeedimetla Industrial Estate", desc: "Volatile organic compound solvent vapors drifting south.", meta: "45 mins ago", upvotes: 30 }
+                ]
+            },
+            chennai_tn: {
+                name: "Chennai, Tamil Nadu",
+                sub: "TNPCB Continuous Station • Alandur Bus Depot & Marina",
+                aqi: 76,
+                category: "Satisfactory",
+                categoryClass: "bg-lime-100 text-lime-800 border-lime-200",
+                summary: "Clean coastal sea breeze dispersing urban transit particulate.",
+                pm25: 26.5,
+                pm10: 62.0,
+                so2: 10.0,
+                no2: 28.0,
+                co: 0.9,
+                o3: 25.0,
+                temp: 31,
+                humidity: 75,
+                wind: "18 km/h E",
+                waterway: "Cooum & Adyar River Estuaries",
+                highway: "Mount Road & GST Road →",
+                sector: "Alandur & Guindy",
+                coords: "13.0827° N, 80.2707° E",
+                pins: [
+                    { id: 1, cat: "Refinery Flare", title: "Manali Petrochemical Belt", desc: "Flare stack emissions carried inland by evening sea breeze.", meta: "1 hour ago", upvotes: 27 }
+                ]
+            }
+        };
+
+        let currentCityId = "durg_core";
+
+        function onCitySelected(cityId) {
+            const city = panIndiaCityData[cityId] || panIndiaCityData["durg_core"];
+            currentCityId = cityId;
+
+            // 1. Update Header
+            const titleEl = document.getElementById('mainCityTitle');
+            if (titleEl) titleEl.textContent = city.name + " Air Quality";
+            const subEl = document.getElementById('mainCitySubText');
+            if (subEl) subEl.textContent = city.sub;
+
+            // 2. Update AQI & Summary
+            const aqiEl = document.getElementById('currentAqi');
+            if (aqiEl) aqiEl.textContent = city.aqi;
+            const badgeEl = document.getElementById('aqiBadge');
+            if (badgeEl) {
+                badgeEl.textContent = city.category;
+                badgeEl.className = "inline-block px-3.5 py-1 rounded-full font-bold text-xs border " + city.categoryClass;
+            }
+            const summaryEl = document.getElementById('aqiSummary');
+            if (summaryEl) summaryEl.textContent = city.summary;
+
+            // Update Animated Meteocon SVG
+            const meteoconEl = document.getElementById('aqiMeteoconImg');
+            if (meteoconEl) {
+                let icon = 'clear-day.svg';
+                if (city.aqi > 300) icon = 'extreme-thunderstorms.svg';
+                else if (city.aqi > 200) icon = 'smoke.svg';
+                else if (city.aqi > 150) icon = 'dust.svg';
+                else if (city.aqi > 100) icon = 'haze.svg';
+                else if (city.aqi > 50) icon = 'partly-cloudy-day.svg';
+                meteoconEl.src = 'meteocons-svg/' + icon;
+            }
+
+            // 3. Update Pollutants
+            const pm25El = document.getElementById('valPm25');
+            if (pm25El) pm25El.textContent = city.pm25;
+            const pm10El = document.getElementById('valPm10');
+            if (pm10El) pm10El.textContent = city.pm10;
+
+            // 4. Update SVG Map Layout
+            const mapTitleEl = document.getElementById('mapTitle');
+            if (mapTitleEl) mapTitleEl.textContent = city.name.split(',')[0] + " Community Pollution Map";
+            const mapSubEl = document.getElementById('mapSubtitle');
+            if (mapSubEl) mapSubEl.textContent = "Live crowdsourced hazard pins for " + city.name;
+            const waterEl = document.getElementById('mapWaterLabel');
+            if (waterEl) waterEl.textContent = city.waterway;
+            const hwyEl = document.getElementById('mapHighwayLabel');
+            if (hwyEl) hwyEl.textContent = city.highway;
+            const sectorEl = document.getElementById('mapSectorLabel');
+            if (sectorEl) sectorEl.textContent = city.sector;
+            const coordsEl = document.getElementById('mapCoordsLabel');
+            if (coordsEl) coordsEl.textContent = city.name.split(',')[0] + " (" + city.coords + ")";
+
+            // 5. Update Map Pins
+            if (city.pins && city.pins.length > 0) {
+                city.pins.forEach((p, idx) => {
+                    const key = idx + 1;
+                    mapPins[key] = {
+                        category: p.cat,
+                        categoryClass: 'bg-red-100 text-red-700',
+                        title: p.title,
+                        desc: p.desc,
+                        meta: p.meta + ' • Reported by Local Citizen',
+                        upvotes: p.upvotes
+                    };
+                });
+                selectMapPin(1);
+            }
+
+            // 6. Refresh charts, smart window & alerts
+            renderChart();
+            updateSmartWindowUI();
+            renderPollenForecast(city.name);
+            renderHistoricalUI();
+            checkAqiThreshold(city.aqi);
+        }
+
+        // --- Map Zoom Controls ---
+        let mapZoomScale = 1.0;
+
+        function zoomMap(delta) {
+            mapZoomScale = Math.min(2.5, Math.max(0.75, Math.round((mapZoomScale + delta) * 100) / 100));
+            const zoomLayer = document.getElementById('interactiveMapZoomLayer');
+            if (zoomLayer) {
+                zoomLayer.style.transform = `scale(${mapZoomScale})`;
+            }
+            const label = document.getElementById('mapZoomLevelText');
+            if (label) {
+                label.textContent = `${Math.round(mapZoomScale * 100)}%`;
+            }
+        }
+
+        function resetMapZoom() {
+            mapZoomScale = 1.0;
+            const zoomLayer = document.getElementById('interactiveMapZoomLayer');
+            if (zoomLayer) {
+                zoomLayer.style.transform = 'scale(1)';
+            }
+            const label = document.getElementById('mapZoomLevelText');
+            if (label) {
+                label.textContent = '100%';
+            }
+        }
+
+        // --- Map Layers Control Panel Toggle & Filters ---
+        let isLayersMenuOpen = false;
+        const activeMapLayers = {
+            industrial: true,
+            waste: true,
+            traffic: true
+        };
+
+        function toggleLayerControlPanel() {
+            isLayersMenuOpen = !isLayersMenuOpen;
+            const menu = document.getElementById('floatingLayersMenu');
+            const arrow = document.getElementById('layerPanelArrow');
+            if (menu) {
+                if (isLayersMenuOpen) {
+                    menu.classList.remove('hidden');
+                    menu.classList.add('flex');
+                } else {
+                    menu.classList.remove('flex');
+                    menu.classList.add('hidden');
+                }
+            }
+            if (arrow) {
+                arrow.className = isLayersMenuOpen ? 'ph-bold ph-caret-up ml-1 text-[10px] text-slate-400' : 'ph-bold ph-caret-down ml-1 text-[10px] text-slate-400';
+            }
+        }
+
+        function toggleMapLayer(layerName, isChecked) {
+            activeMapLayers[layerName] = isChecked;
+
+            if (layerName === 'industrial') {
+                const hotspot = document.getElementById('hotspotIndustrialCircle');
+                if (hotspot) hotspot.style.display = isChecked ? 'block' : 'none';
+                document.querySelectorAll('.layer-industrial-pin').forEach(el => {
+                    el.style.display = isChecked ? 'block' : 'none';
+                });
+            } else if (layerName === 'waste') {
+                const hotspot = document.getElementById('hotspotPadmanabhpurCircle');
+                if (hotspot) hotspot.style.display = isChecked ? 'block' : 'none';
+                document.querySelectorAll('.layer-waste-pin').forEach(el => {
+                    el.style.display = isChecked ? 'block' : 'none';
+                });
+            } else if (layerName === 'traffic') {
+                const hotspot = document.getElementById('hotspotTransitCircle');
+                if (hotspot) hotspot.style.display = isChecked ? 'block' : 'none';
+                document.querySelectorAll('.layer-traffic-pin').forEach(el => {
+                    el.style.display = isChecked ? 'block' : 'none';
+                });
+            }
+
+            const activeCount = Object.values(activeMapLayers).filter(Boolean).length;
+            const badge = document.getElementById('activeLayersCountBadge');
+            if (badge) badge.textContent = `${activeCount}/3`;
+        }
+
+        // --- Comprehensive Historical Air Quality & Trend Data Engine ---
+        let selectedHistRange = 'week';
+        let selectedHistMetric = 'aqi';
+        let historicalChartInstance = null;
+
+        const histMetricConfig = {
+            aqi: { name: 'AQI', unit: '', threshold: 100, standard: 'CPCB Limit (100)' },
+            pm25: { name: 'PM2.5', unit: 'µg/m³', threshold: 60, standard: 'NAAQS 24-hr (60 µg/m³)' },
+            pm10: { name: 'PM10', unit: 'µg/m³', threshold: 100, standard: 'NAAQS 24-hr (100 µg/m³)' },
+            no2: { name: 'NO₂', unit: 'µg/m³', threshold: 80, standard: 'NAAQS Standard (80 µg/m³)' },
+            so2: { name: 'SO₂', unit: 'µg/m³', threshold: 80, standard: 'NAAQS Standard (80 µg/m³)' },
+            co: { name: 'CO', unit: 'mg/m³', threshold: 2.0, standard: 'NAAQS 8-hr (2.0 mg/m³)' },
+            o3: { name: 'O₃', unit: 'µg/m³', threshold: 100, standard: 'NAAQS 8-hr (100 µg/m³)' }
+        };
+
+        function getHistoricalDataSet(cityName, range, metric) {
+            const isDelhi = cityName.includes("Delhi");
+            const isBhilaiOrDurg = cityName.includes("Durg") || cityName.includes("Bhilai");
+            const isBengaluru = cityName.includes("Bengaluru");
+            const isMumbai = cityName.includes("Mumbai");
+
+            const multiplier = isDelhi ? 1.45 : isBhilaiOrDurg ? 1.15 : isBengaluru ? 0.70 : isMumbai ? 0.95 : 1.0;
+
+            const baseValues = {
+                aqi: 138 * multiplier,
+                pm25: 74 * multiplier,
+                pm10: 142 * multiplier,
+                no2: 48 * multiplier,
+                so2: 34 * multiplier,
+                co: 1.4 * multiplier,
+                o3: 52 * multiplier
+            };
+
+            const baseVal = baseValues[metric] || 100;
+
+            if (range === 'week') {
+                const labels = ['Mon (Oct 14)', 'Tue (Oct 15)', 'Wed (Oct 16)', 'Thu (Oct 17)', 'Fri (Oct 18)', 'Sat (Oct 19)', 'Sun (Oct 20)'];
+                const shortLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+                const weights = [0.92, 1.05, 1.28, 1.35, 1.15, 0.88, 0.82];
+                const notes = [
+                    'Baseline weekday mixing',
+                    'Industrial shift ramp-up',
+                    'Metallurgical processing output peak (+28%)',
+                    'Weekly particulate crest with calm wind',
+                    'Late evening freight traffic',
+                    'Weekend commercial vehicle drop',
+                    'Sunday traffic reduction (-24%)'
+                ];
+                const data = weights.map(w => Math.round(baseVal * w * 10) / 10);
+                const highlights = [
+                    {
+                        title: 'Midweek Industrial Plume',
+                        change: '+35% Surge',
+                        isWorsening: true,
+                        period: 'Wed - Thu',
+                        desc: 'Intensive metallurgical casting cycles and calm wind conditions accelerated particulate accumulation.'
+                    },
+                    {
+                        title: 'Weekend Atmospheric Clearance',
+                        change: '-24% Drop',
+                        isWorsening: false,
+                        period: 'Sat - Sun',
+                        desc: 'Reduced commercial heavy-duty diesel transit along NH-53 lowered regional emissions.'
+                    }
+                ];
+                return {
+                    labels,
+                    shortLabels,
+                    data,
+                    notes,
+                    highlights,
+                    summary: 'Air pollution exhibited a marked mid-week surge driven by localized industrial shift operations and calm surface winds, followed by a 24% clearance over the weekend.'
+                };
+            } else if (range === 'month') {
+                const labels = ['Sep 21', 'Sep 24', 'Sep 27', 'Sep 30', 'Oct 3', 'Oct 6', 'Oct 9', 'Oct 12', 'Oct 15', 'Oct 18', 'Oct 20'];
+                const shortLabels = ['Day 1', 'Day 4', 'Day 7', 'Day 10', 'Day 13', 'Day 16', 'Day 19', 'Day 22', 'Day 25', 'Day 28', 'Day 30'];
+                const weights = [0.78, 0.82, 0.74, 0.89, 1.12, 1.38, 1.45, 1.25, 1.18, 1.05, 0.94];
+                const notes = [
+                    'Late monsoon rain shower',
+                    'Clean atmospheric boundary layer',
+                    'Monsoon rain washout (-26%)',
+                    'Dry spell commencement',
+                    'Early biomass heating start',
+                    'Autumn thermal boundary decrease',
+                    'Pre-harvest stubble & firework surge (+52%)',
+                    'Wind shift to north-westerly',
+                    'High diesel transit emissions',
+                    'Moderate afternoon dispersion',
+                    'Current stabilization'
+                ];
+                const data = weights.map(w => Math.round(baseVal * w * 10) / 10);
+                const highlights = [
+                    {
+                        title: 'Seasonal Transition Inversion Spike',
+                        change: '+52% Spike',
+                        isWorsening: true,
+                        period: 'Oct 6 - Oct 12',
+                        desc: 'Onset of post-monsoon dry air and lower boundary layer depth trapped vehicular and stubble smoke.'
+                    },
+                    {
+                        title: 'Monsoon Retreat Rainfall Scavenging',
+                        change: '-26% Clearance',
+                        isWorsening: false,
+                        period: 'Late September',
+                        desc: 'Precipitation scavenging effectively settled coarse PM10 and ambient particulate concentrations.'
+                    }
+                ];
+                return {
+                    labels,
+                    shortLabels,
+                    data,
+                    notes,
+                    highlights,
+                    summary: 'Over the past 30 days, air quality transitioned from late-monsoon cleanliness into the autumn inversion phase, exhibiting a notable +52% particulate increase.'
+                };
+            } else {
+                const labels = ['Nov 2024', 'Dec 2024', 'Jan 2025', 'Feb 2025', 'Mar 2025', 'Apr 2025', 'May 2025', 'Jun 2025', 'Jul 2025', 'Aug 2025', 'Sep 2025', 'Oct 2025'];
+                const shortLabels = ['Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct'];
+                const weights = [1.75, 1.85, 1.65, 1.25, 1.05, 1.15, 1.20, 0.75, 0.48, 0.44, 0.62, 1.12];
+                const notes = [
+                    'Post-harvest stubble & Diwali burst',
+                    'Winter nocturnal radiation inversion peak (+85%)',
+                    'Persistent morning smog & cold wave',
+                    'Rising mixing layer depth',
+                    'Mild spring temperatures',
+                    'Pre-monsoon hot convective winds',
+                    'Pre-monsoon dust storm & ozone (+20%)',
+                    'Early monsoon arrival',
+                    'Peak southwest monsoon washout (-56%)',
+                    'Annual cleanest air minimum',
+                    'Late monsoon retreat',
+                    'Autumn inversion beginning'
+                ];
+                const data = weights.map(w => Math.round(baseVal * w * 10) / 10);
+                const highlights = [
+                    {
+                        title: 'Monsoon Atmospheric Scrubbing',
+                        change: '-56% Annual Low',
+                        isWorsening: false,
+                        period: 'July - August',
+                        desc: 'Consistent rainfall and turbulent convective mixing cleansed ambient PM2.5 and PM10 to yearly lows.'
+                    },
+                    {
+                        title: 'Winter Nocturnal Inversion',
+                        change: '+85% Extreme Peak',
+                        isWorsening: true,
+                        period: 'November - December',
+                        desc: 'Severe radiation inversion locked cold ground air and prevented industrial plume dispersion.'
+                    },
+                    {
+                        title: 'Pre-Monsoon Convective Dust',
+                        change: '+20% Coarse PM Rise',
+                        isWorsening: true,
+                        period: 'April - May',
+                        desc: 'High surface temperatures generated thermal winds carrying loose crustal dust across highway corridors.'
+                    }
+                ];
+                return {
+                    labels,
+                    shortLabels,
+                    data,
+                    notes,
+                    highlights,
+                    summary: 'The annual cycle reflects classic Indian seasonality: intense winter inversion peaks (Nov-Jan), dust and photochemical ozone elevated in pre-monsoon (May), and pristine wet-scavenged air during the monsoon (Jul-Aug).'
+                };
+            }
+        }
+
+        function switchHistoricalRange(range) {
+            selectedHistRange = range;
+            const btnWeek = document.getElementById('btnHistRangeWeek');
+            const btnMonth = document.getElementById('btnHistRangeMonth');
+            const btnYear = document.getElementById('btnHistRangeYear');
+
+            const activeClass = 'flex-1 sm:flex-initial px-3 py-1.5 text-xs font-bold rounded-lg bg-white text-slate-800 shadow-sm transition-all';
+            const inactiveClass = 'flex-1 sm:flex-initial px-3 py-1.5 text-xs font-semibold rounded-lg text-slate-600 hover:text-slate-800 transition-all';
+
+            if (btnWeek) btnWeek.className = range === 'week' ? activeClass : inactiveClass;
+            if (btnMonth) btnMonth.className = range === 'month' ? activeClass : inactiveClass;
+            if (btnYear) btnYear.className = range === 'year' ? activeClass : inactiveClass;
+
+            renderHistoricalUI();
+        }
+
+        function switchHistoricalMetric(metricKey) {
+            selectedHistMetric = metricKey;
+            document.querySelectorAll('.hist-metric-btn').forEach(btn => {
+                btn.className = 'hist-metric-btn px-3 py-1.5 text-xs font-semibold rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 transition-all whitespace-nowrap';
+            });
+            const activeBtn = document.getElementById('btnHistMetric_' + metricKey);
+            if (activeBtn) {
+                activeBtn.className = 'hist-metric-btn px-3 py-1.5 text-xs font-bold rounded-xl bg-blue-600 text-white shadow-sm transition-all whitespace-nowrap';
+            }
+            renderHistoricalUI();
+        }
+
+        function renderHistoricalUI() {
+            const activeCity = panIndiaCityData[currentCityId]?.name || "Durg, CG";
+            const badge = document.getElementById('historicalCityBadge');
+            if (badge) badge.textContent = activeCity.split(',')[0];
+
+            const dataset = getHistoricalDataSet(activeCity, selectedHistRange, selectedHistMetric);
+            const cfg = histMetricConfig[selectedHistMetric] || histMetricConfig.aqi;
+
+            const values = dataset.data;
+            const avg = Math.round((values.reduce((a, b) => a + b, 0) / values.length) * 10) / 10;
+            const maxVal = Math.max(...values);
+            const maxIdx = values.indexOf(maxVal);
+            const minVal = Math.min(...values);
+            const minIdx = values.indexOf(minVal);
+            const netTrend = Math.round(((values[values.length - 1] - values[0]) / values[0]) * 1000) / 10;
+
+            // Update 4 Summary Stat Boxes
+            if (document.getElementById('histAvgVal')) document.getElementById('histAvgVal').textContent = avg;
+            if (document.getElementById('histAvgUnit')) document.getElementById('histAvgUnit').textContent = cfg.unit;
+            if (document.getElementById('histAvgSub')) document.getElementById('histAvgSub').textContent = `Across ${values.length} records`;
+
+            if (document.getElementById('histPeakVal')) document.getElementById('histPeakVal').textContent = maxVal;
+            if (document.getElementById('histPeakUnit')) document.getElementById('histPeakUnit').textContent = cfg.unit;
+            if (document.getElementById('histPeakSub')) document.getElementById('histPeakSub').textContent = dataset.labels[maxIdx];
+
+            if (document.getElementById('histMinVal')) document.getElementById('histMinVal').textContent = minVal;
+            if (document.getElementById('histMinUnit')) document.getElementById('histMinUnit').textContent = cfg.unit;
+            if (document.getElementById('histMinSub')) document.getElementById('histMinSub').textContent = dataset.labels[minIdx];
+
+            const trendEl = document.getElementById('histNetTrendVal');
+            const trendSub = document.getElementById('histNetTrendSub');
+            if (trendEl) {
+                trendEl.textContent = (netTrend > 0 ? '+' : '') + netTrend + '%';
+                trendEl.className = 'text-lg font-black ' + (netTrend <= 0 ? 'text-emerald-600' : 'text-red-600');
+            }
+            if (trendSub) {
+                trendSub.textContent = netTrend <= 0 ? 'Improved Air Quality' : 'Elevated Pollution';
+                trendSub.className = 'text-[10px] font-medium block mt-0.5 ' + (netTrend <= 0 ? 'text-emerald-700' : 'text-red-700');
+            }
+
+            // Update Highlight Cards
+            const hContainer = document.getElementById('histHighlightsContainer');
+            const hCount = document.getElementById('histHighlightsCount');
+            if (hCount) hCount.textContent = `${dataset.highlights.length} Shifts Identified`;
+            if (hContainer) {
+                hContainer.innerHTML = '';
+                dataset.highlights.forEach(h => {
+                    const card = document.createElement('div');
+                    const isWorsening = h.isWorsening;
+                    const badgeBg = isWorsening ? 'bg-red-50 text-red-700 border-red-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200';
+                    const icon = isWorsening ? 'ph-bold ph-trend-up text-red-500' : 'ph-bold ph-trend-down text-emerald-500';
+                    card.className = 'p-3 bg-slate-50/80 border border-slate-200 rounded-xl flex items-start space-x-2.5';
+                    card.innerHTML = `
+                        <div class="w-8 h-8 rounded-lg bg-white shadow-sm flex items-center justify-center shrink-0 border border-slate-200">
+                            <i class="${icon} text-base"></i>
+                        </div>
+                        <div class="flex-grow">
+                            <div class="flex items-center justify-between">
+                                <h4 class="text-xs font-bold text-slate-800">${h.title}</h4>
+                                <span class="text-[10px] font-extrabold px-2 py-0.5 rounded-full border ${badgeBg}">${h.change}</span>
+                            </div>
+                            <span class="text-[10px] font-semibold text-blue-600 block mt-0.5">${h.period}</span>
+                            <p class="text-xs text-slate-600 mt-1 leading-relaxed">${h.desc}</p>
+                        </div>
+                    `;
+                    hContainer.appendChild(card);
+                });
+            }
+
+            // Update Expert Summary
+            const summaryEl = document.getElementById('histExpertSummaryText');
+            if (summaryEl) summaryEl.textContent = dataset.summary;
+
+            // Render Chart.js
+            renderHistoricalChart(dataset, cfg);
+        }
+
+        function renderHistoricalChart(dataset, cfg) {
+            const ctx = document.getElementById('historicalChart');
+            if (!ctx) return;
+
+            if (historicalChartInstance) {
+                historicalChartInstance.destroy();
+            }
+
+            const gradient = ctx.getContext('2d').createLinearGradient(0, 0, 0, 240);
+            gradient.addColorStop(0, 'rgba(59, 130, 246, 0.35)');
+            gradient.addColorStop(1, 'rgba(59, 130, 246, 0.01)');
+
+            historicalChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: dataset.shortLabels,
+                    datasets: [
+                        {
+                            label: `${cfg.name} (${cfg.unit || 'Index'})`,
+                            data: dataset.data,
+                            borderColor: '#2563eb',
+                            backgroundColor: gradient,
+                            fill: true,
+                            tension: 0.35,
+                            borderWidth: 2.5,
+                            pointBackgroundColor: '#ffffff',
+                            pointBorderColor: '#2563eb',
+                            pointBorderWidth: 2,
+                            pointRadius: 4,
+                            pointHoverRadius: 6
+                        },
+                        {
+                            label: cfg.standard,
+                            data: dataset.data.map(() => cfg.threshold),
+                            borderColor: '#ef4444',
+                            borderWidth: 1.5,
+                            borderDash: [6, 6],
+                            fill: false,
+                            pointRadius: 0
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            labels: {
+                                font: { size: 10, weight: 'bold', family: 'Inter' },
+                                boxWidth: 12
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: '#0f172a',
+                            titleFont: { size: 11, weight: 'bold' },
+                            bodyFont: { size: 11 },
+                            padding: 10,
+                            callbacks: {
+                                label: function(context) {
+                                    const val = context.parsed.y;
+                                    const unit = cfg.unit ? ` ${cfg.unit}` : '';
+                                    return ` ${context.dataset.label}: ${val}${unit}`;
+                                },
+                                afterLabel: function(context) {
+                                    if (context.datasetIndex === 0) {
+                                        const note = dataset.notes[context.dataIndex];
+                                        return note ? `Note: ${note}` : '';
+                                    }
+                                    return '';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { display: false },
+                            ticks: { font: { size: 10, weight: '500' } }
+                        },
+                        y: {
+                            grid: { color: '#f1f5f9' },
+                            ticks: { font: { size: 10 } }
+                        }
+                    }
+                }
+            });
+        }
+
+        function generateForecastData() {
+            const labels = [];
+            const data = [];
+            const currentHour = new Date().getHours();
+            const currentCity = panIndiaCityData[currentCityId] || panIndiaCityData["durg_core"];
+            let baseAqi = currentCity.aqi;
+            
+            for (let i = 0; i <= 24; i += 2) {
+                let hour = (currentHour + i) % 24;
+                let ampm = hour >= 12 ? 'PM' : 'AM';
+                let displayHour = hour % 12 || 12;
+                labels.push(`${displayHour} ${ampm}`);
+                
+                let modifier = 0;
+                if (hour >= 19 && hour <= 22) modifier = 32; // Evening spike
+                else if (hour >= 8 && hour <= 10) modifier = 18; // Morning rush spike
+                else if (hour >= 1 && hour <= 5) modifier = -30; // Late night drop
+                
+                let predictedAqi = Math.max(30, Math.min(420, baseAqi + modifier + (Math.random() * 8 - 4)));
+                data.push(Math.round(predictedAqi));
+            }
+            return { labels, data };
+        }
+
+        // --- Map Pins Interactive State ---
+        const mapPins = {
+            1: {
+                category: 'Open Burning',
+                categoryClass: 'bg-red-100 text-red-700',
+                title: 'Padmanabhpur Bypass Ring Road',
+                desc: 'Dense smoke plume billowing from waste piles near residential colonies. Visibility reduced on bypass road.',
+                meta: '35 mins ago • Reported by Aman K.',
+                upvotes: 14
+            },
+            2: {
+                category: 'Industrial',
+                categoryClass: 'bg-red-100 text-red-700',
+                title: 'G.E. Road near Bhilai-Durg Border',
+                desc: 'Dark industrial plume blowing southwards during shift change. High sulfurous odor detected.',
+                meta: '1.5 hours ago • Reported by Pooja S.',
+                upvotes: 28
+            },
+            3: {
+                category: 'Construction Dust',
+                categoryClass: 'bg-amber-100 text-amber-700',
+                title: 'Mohan Nagar Overbridge',
+                desc: 'Uncovered aggregate haulers generating heavy fly-ash and dust clouds across junction lanes.',
+                meta: '2.5 hours ago • Reported by Vikram R.',
+                upvotes: 9
+            },
+            4: {
+                category: 'Vehicle Exhaust',
+                categoryClass: 'bg-orange-100 text-orange-700',
+                title: 'Durg Railway Station Bus Stand',
+                desc: 'Idling diesel buses and interstate freight creating concentrated black carbon pocket.',
+                meta: '4 hours ago • Reported by Rajesh N.',
+                upvotes: 7
+            },
+            5: {
+                category: 'Biomass Burning',
+                categoryClass: 'bg-red-100 text-red-700',
+                title: 'Indira Market Outer Perimeter',
+                desc: 'Vegetable waste and discarded cardboard incinerated behind commercial stalls.',
+                meta: '5 hours ago • Reported by Neha T.',
+                upvotes: 11
+            }
+        };
+
+        let activePinId = 1;
+
+        function selectMapPin(id) {
+            activePinId = id;
+            const pin = mapPins[id];
+            if (!pin) return;
+
+            document.getElementById('pinCategoryBadge').textContent = pin.category;
+            document.getElementById('pinCategoryBadge').className = `px-2 py-0.5 text-[10px] font-bold rounded-full ${pin.categoryClass}`;
+            document.getElementById('pinTitleText').textContent = pin.title;
+            document.getElementById('pinDescText').textContent = pin.desc;
+            document.getElementById('pinMetaText').textContent = pin.meta;
+            document.getElementById('pinUpvoteLabel').textContent = `Confirm (${pin.upvotes})`;
+
+            for (let i = 1; i <= 5; i++) {
+                const pulse = document.getElementById('pinPulse_' + i);
+                if (pulse) {
+                    if (i === id) pulse.classList.remove('hidden');
+                    else pulse.classList.add('hidden');
+                }
+            }
+        }
+
+        function upvoteActivePin() {
+            const pin = mapPins[activePinId];
+            if (pin) {
+                pin.upvotes += 1;
+                document.getElementById('pinUpvoteLabel').textContent = `Confirm (${pin.upvotes})`;
+            }
+        }
+
+        // --- Chart & Historical Toggle Logic ---
+        let currentChartMode = '24h';
+        const durgHistorical7Days = {
+            labels: ['Thu (Sep 25)', 'Fri (Sep 26)', 'Sat (Sep 27)', 'Sun (Sep 28)', 'Mon (Sep 29)', 'Tue (Sep 30)', 'Today (Oct 01)'],
+            shortLabels: ['Thu', 'Fri', 'Sat', 'Sun', 'Mon', 'Tue', 'Today'],
+            data: [124, 158, 146, 112, 164, 138, 142],
+            pm25: [46.2, 62.4, 56.8, 41.5, 66.0, 52.1, 54.2],
+            notes: [
+                'Moderate regional breeze, calm industrial dispersion along Shivnath basin',
+                'High industrial shift output near Bhilai boundary and Padmanabhpur',
+                'Weekend shopping vehicular congestion in Durg core and Indira market',
+                'Lowest weekly emissions; reduced commercial freight on NH-53',
+                'Weekday industrial restart and heavy highway transit dust',
+                'Clear afternoon skies, moderate particulate dispersion',
+                'Current active sensor baseline across Durg urban core'
+            ]
+        };
+
+        function switchChartMode(mode) {
+            currentChartMode = mode;
+            const btn24h = document.getElementById('btnToggle24h');
+            const btn7d = document.getElementById('btnToggle7d');
+            const title = document.getElementById('chartTitleText');
+            const subtitle = document.getElementById('chartSubtitleText');
+            const badge = document.getElementById('chartSourceBadge');
+            const footer = document.getElementById('chartFooterText');
+
+            if (mode === '24h') {
+                btn24h.className = 'px-2.5 py-1 text-xs font-bold rounded-lg bg-white text-slate-800 shadow-sm transition-all';
+                btn7d.className = 'px-2.5 py-1 text-xs font-semibold rounded-lg text-slate-600 hover:text-slate-800 transition-all';
+                title.textContent = '24-Hour AI Predictive Forecast';
+                subtitle.textContent = 'Hourly AQI variation forecast for Durg urban corridor';
+                badge.textContent = 'Powered by Local ML';
+                badge.className = 'hidden sm:inline-block text-[11px] font-semibold bg-blue-50 text-blue-600 px-2.5 py-1 rounded-md border border-blue-100';
+                footer.textContent = 'Prediction incorporates local weather, traffic patterns on NH-53, and Bhilai industrial shift outputs.';
+            } else {
+                btn7d.className = 'px-2.5 py-1 text-xs font-bold rounded-lg bg-white text-slate-800 shadow-sm transition-all';
+                btn24h.className = 'px-2.5 py-1 text-xs font-semibold rounded-lg text-slate-600 hover:text-slate-800 transition-all';
+                title.textContent = '7-Day Historical Air Quality Trends';
+                subtitle.textContent = 'Recorded daily air quality levels for Durg (Sep 25 - Oct 01)';
+                badge.textContent = 'Historical Sensor Data';
+                badge.className = 'hidden sm:inline-block text-[11px] font-semibold bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-md border border-emerald-200';
+                footer.textContent = 'Durg historical trend captures Sunday freight lull (AQI 112) vs Monday industrial restart surge (AQI 164).';
+            }
+            renderChart();
+        }
+
+        function renderChart() {
+            const ctx = document.getElementById('forecastChart').getContext('2d');
+            if (forecastChart) forecastChart.destroy();
+
+            if (currentChartMode === '24h') {
+                const forecast = generateForecastData();
+                const gradient = ctx.createLinearGradient(0, 0, 0, 220);
+                gradient.addColorStop(0, 'rgba(249, 115, 22, 0.28)');
+                gradient.addColorStop(1, 'rgba(249, 115, 22, 0)');
+
+                forecastChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: forecast.labels,
+                        datasets: [{
+                            label: 'Predicted AQI',
+                            data: forecast.data,
+                            borderColor: '#f97316',
+                            backgroundColor: gradient,
+                            borderWidth: 2.5,
+                            pointBackgroundColor: '#fff',
+                            pointBorderColor: '#f97316',
+                            pointBorderWidth: 2,
+                            pointRadius: 3.5,
+                            pointHoverRadius: 6,
+                            fill: true,
+                            tension: 0.38
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                                padding: 8,
+                                cornerRadius: 8,
+                                displayColors: false,
+                                callbacks: {
+                                    label: function(context) {
+                                        return `Predicted AQI: ${context.parsed.y}`;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                grid: { display: false },
+                                ticks: { color: '#64748b', font: { family: 'Inter', size: 10 } }
+                            },
+                            y: {
+                                grid: { color: '#f1f5f9' },
+                                ticks: { color: '#64748b', font: { family: 'Inter', size: 10 } },
+                                min: 60,
+                                suggestedMax: 200
+                            }
+                        }
+                    }
+                });
+            } else {
+                // 7-Day History Chart
+                const gradient = ctx.createLinearGradient(0, 0, 0, 220);
+                gradient.addColorStop(0, 'rgba(59, 130, 246, 0.28)');
+                gradient.addColorStop(1, 'rgba(59, 130, 246, 0)');
+
+                forecastChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: durgHistorical7Days.shortLabels,
+                        datasets: [{
+                            label: 'Historical AQI',
+                            data: durgHistorical7Days.data,
+                            borderColor: '#3b82f6',
+                            backgroundColor: gradient,
+                            borderWidth: 2.5,
+                            pointBackgroundColor: '#fff',
+                            pointBorderColor: '#3b82f6',
+                            pointBorderWidth: 2,
+                            pointRadius: 4,
+                            pointHoverRadius: 7,
+                            fill: true,
+                            tension: 0.35
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                                padding: 9,
+                                cornerRadius: 8,
+                                displayColors: false,
+                                callbacks: {
+                                    title: function(items) {
+                                        const idx = items[0].dataIndex;
+                                        return durgHistorical7Days.labels[idx];
+                                    },
+                                    label: function(context) {
+                                        const idx = context.dataIndex;
+                                        return [
+                                            `Recorded AQI: ${context.parsed.y}`,
+                                            `PM2.5: ${durgHistorical7Days.pm25[idx]} µg/m³`,
+                                            `Note: ${durgHistorical7Days.notes[idx]}`
+                                        ];
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                grid: { display: false },
+                                ticks: { color: '#64748b', font: { family: 'Inter', size: 10 } }
+                            },
+                            y: {
+                                grid: { color: '#f1f5f9' },
+                                ticks: { color: '#64748b', font: { family: 'Inter', size: 10 } },
+                                min: 80,
+                                suggestedMax: 200
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        function initChart() {
+            renderChart();
+        }
+
+        // --- Historical Data Export (CSV) ---
+        function exportHistoricalDataCsv() {
+            const headers = ["Date", "Day", "AQI", "PM2.5 (ug/m3)", "Category", "Notes", "Location"];
+            const rows = durgHistorical7Days.labels.map((dateStr, idx) => {
+                const day = durgHistorical7Days.shortLabels[idx];
+                const aqi = durgHistorical7Days.data[idx];
+                const pm25 = durgHistorical7Days.pm25[idx];
+                let cat = "Moderate";
+                if (aqi > 150) cat = "Poor / Unhealthy";
+                else if (aqi > 100) cat = "Moderate / Poor";
+                else if (aqi <= 50) cat = "Good";
+                const note = durgHistorical7Days.notes[idx].replace(/"/g, '""');
+                return `"${dateStr}","${day}",${aqi},${pm25},"${cat}","${note}","Durg, Chhattisgarh"`;
+            });
+            const csvContent = headers.join(",") + "\n" + rows.join("\n");
+            const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.setAttribute("href", url);
+            link.setAttribute("download", `Durg_AirQuality_7Day_Trend_${new Date().toISOString().slice(0, 10)}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // --- Geolocation-Based Hotspot Proximity Alert (< 500m) ---
+        const durgHotspotsGeo = [
+            { name: "Padmanabhpur Bypass Ring Road", hazard: "Open Garbage Burning", lat: 21.1824, lon: 81.2750 },
+            { name: "G.E. Road near Bhilai Border", hazard: "Industrial Smelter Plume", lat: 21.1985, lon: 81.3020 },
+            { name: "Durg Railway Station Bus Stand", hazard: "Transit Diesel Exhaust", lat: 21.1920, lon: 81.2840 }
+        ];
+
+        function calculateHaversineDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371000; // meters
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLon/2) * Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return Math.round(R * c);
+        }
+
+        function checkHotspotProximity() {
+            if ("geolocation" in navigator) {
+                navigator.geolocation.getCurrentPosition(
+                    (pos) => {
+                        const uLat = pos.coords.latitude;
+                        const uLon = pos.coords.longitude;
+                        evaluateHotspotDistance(uLat, uLon);
+                    },
+                    (err) => {
+                        // Fallback simulated proximity in Durg for demonstration (340m from Padmanabhpur hotspot)
+                        evaluateHotspotDistance(21.1840, 81.2770);
+                    },
+                    { timeout: 4000 }
+                );
+            } else {
+                evaluateHotspotDistance(21.1840, 81.2770);
+            }
+        }
+
+        function evaluateHotspotDistance(uLat, uLon) {
+            let closest = null;
+            let minDistance = Infinity;
+
+            durgHotspotsGeo.forEach(hotspot => {
+                const dist = calculateHaversineDistance(uLat, uLon, hotspot.lat, hotspot.lon);
+                if (dist < minDistance) {
+                    minDistance = dist;
+                    closest = hotspot;
+                }
+            });
+
+            // Threshold: 500 meters
+            if (closest && minDistance <= 500) {
+                triggerHotspotProximityAlert(closest, minDistance);
+            } else if (closest) {
+                alert(`Proximity Check: You are ${minDistance}m away from the nearest reported hotspot (${closest.name}). Currently beyond the 500m danger radius.`);
+            }
+        }
+
+        function triggerHotspotProximityAlert(hotspot, distanceMeters) {
+            const banner = document.getElementById('hotspotProximityBanner');
+            const text = document.getElementById('hotspotProximityText');
+            if (banner && text) {
+                banner.classList.remove('hidden');
+                text.textContent = `Warning: You are ${distanceMeters}m from ${hotspot.name} (${hotspot.hazard}). High particulate exposure risk! Put on your N95 respirator.`;
+                banner.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+
+            // Browser Notification
+            const title = `🚨 Hotspot Proximity Alert (${distanceMeters}m)`;
+            const body = `You are within ${distanceMeters}m of a high-density pollution hotspot at ${hotspot.name} (${hotspot.hazard}). N95 mask required immediately.`;
+
+            if ("Notification" in window) {
+                if (Notification.permission === "granted") {
+                    new Notification(title, {
+                        body: body,
+                        icon: "https://cdn-icons-png.flaticon.com/512/3208/3208722.png",
+                        tag: "hotspot-proximity-alert"
+                    });
+                } else if (Notification.permission !== "denied") {
+                    Notification.requestPermission().then(perm => {
+                        if (perm === "granted") {
+                            new Notification(title, {
+                                body: body,
+                                icon: "https://cdn-icons-png.flaticon.com/512/3208/3208722.png",
+                                tag: "hotspot-proximity-alert"
+                            });
+                        }
+                    });
+                }
+            }
+        }
+
+        function dismissProximityBanner() {
+            const banner = document.getElementById('hotspotProximityBanner');
+            if (banner) banner.classList.add('hidden');
+        }
+
+        // --- Mock Air Purifier API & Real-time IAQ Integration ---
+        const mockAirPurifier = {
+            isPoweredOn: true,
+            mode: 'auto', // 'auto', 'turbo', 'sleep'
+            fanSpeed: 2,
+            filterLife: 87,
+            targetAqi: 35
+        };
+
+        function togglePurifierPower() {
+            mockAirPurifier.isPoweredOn = !mockAirPurifier.isPoweredOn;
+            updatePurifierUI();
+        }
+
+        function setPurifierMode(mode) {
+            mockAirPurifier.mode = mode;
+            mockAirPurifier.isPoweredOn = true;
+            updatePurifierUI();
+        }
+
+        function updatePurifierUI() {
+            const icon = document.getElementById('purifierFanIcon');
+            const badge = document.getElementById('purifierPowerBadge');
+            const sub = document.getElementById('purifierSubtitle');
+            const pwrBtn = document.getElementById('btnPurifierPower');
+            const pwrBtnText = document.getElementById('purifierPowerBtnText');
+            const curAqi = parseInt(document.getElementById('currentAqi')?.textContent) || 142;
+
+            if (!pwrBtn) return;
+
+            // If auto mode is on and indoor/outdoor AQI is high, ensure purifier is active
+            if (mockAirPurifier.mode === 'auto' && curAqi > 80 && !mockAirPurifier.isPoweredOn) {
+                mockAirPurifier.isPoweredOn = true;
+            }
+
+            if (mockAirPurifier.isPoweredOn) {
+                if (icon) {
+                    icon.className = "ph-bold ph-fan text-base text-blue-600 animate-spin";
+                    icon.style.animationDuration = mockAirPurifier.mode === 'turbo' ? '0.6s' : mockAirPurifier.mode === 'sleep' ? '3s' : '1.5s';
+                }
+                if (pwrBtn) {
+                    pwrBtn.className = "px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-xs font-bold rounded-xl transition-all flex items-center shadow-sm";
+                }
+                if (pwrBtnText) pwrBtnText.textContent = "Power ON";
+                if (badge) {
+                    badge.className = "text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200";
+                    badge.textContent = `ACTIVE (${mockAirPurifier.mode.toUpperCase()})`;
+                }
+                if (sub) {
+                    sub.textContent = `HEPA H13 filtration active • Mode: ${mockAirPurifier.mode.toUpperCase()} • Filter: ${mockAirPurifier.filterLife}% • Target IAQ: < 35 (IAQ-linked)`;
+                }
+            } else {
+                if (icon) {
+                    icon.className = "ph-bold ph-fan text-base text-slate-400";
+                    icon.style.animation = "none";
+                }
+                if (pwrBtn) {
+                    pwrBtn.className = "px-3 py-1.5 bg-slate-200 hover:bg-slate-300 active:bg-slate-400 text-slate-700 text-xs font-bold rounded-xl transition-all flex items-center shadow-sm";
+                }
+                if (pwrBtnText) pwrBtnText.textContent = "Power OFF";
+                if (badge) {
+                    badge.className = "text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200";
+                    badge.textContent = "STANDBY";
+                }
+                if (sub) {
+                    sub.textContent = "Purifier powered OFF • Tap Power to activate indoor air particulate scrubbing";
+                }
+            }
+
+            // Mode buttons UI
+            ['auto', 'turbo', 'sleep'].forEach(m => {
+                const el = document.getElementById('btnPurifier' + m.charAt(0).toUpperCase() + m.slice(1));
+                if (el) {
+                    if (mockAirPurifier.isPoweredOn && mockAirPurifier.mode === m) {
+                        el.className = "px-2 py-1 font-bold rounded-lg bg-blue-600 text-white shadow-xs";
+                    } else {
+                        el.className = "px-2 py-1 font-medium rounded-lg text-slate-600 hover:text-slate-900";
+                    }
+                }
+            });
+        }
+
+        // --- Smart Window Indicator Service (Indoor vs Outdoor AQI/Humidity) ---
+        let smartWindowSimFresh = false;
+
+        function updateSmartWindowUI() {
+            const bar = document.getElementById('smartWindowHeaderBar');
+            const iconContainer = document.getElementById('smartWindowIconContainer');
+            const icon = document.getElementById('smartWindowIcon');
+            const badge = document.getElementById('smartWindowBadge');
+            const headline = document.getElementById('smartWindowHeadline');
+            const metrics = document.getElementById('smartWindowMetrics');
+            const simLabel = document.getElementById('smartWindowSimLabel');
+
+            if (!bar || !headline) return;
+
+            if (smartWindowSimFresh) {
+                bar.className = "mb-4 p-3.5 bg-emerald-50/90 border border-emerald-200 rounded-2xl shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3";
+                iconContainer.className = "w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0";
+                icon.className = "ph-bold ph-door-open text-2xl";
+                badge.className = "text-[10px] font-extrabold bg-emerald-200 text-emerald-900 px-2 py-0.5 rounded-full";
+                badge.textContent = "OPEN";
+                headline.textContent = "Open windows now";
+                headline.className = "text-sm font-extrabold text-emerald-950 mt-0.5";
+                metrics.textContent = "Outdoor: AQI 42 • 48% RH | Indoor: AQI 68 • 58% RH (Clean outdoor breeze, ideal for cross-ventilation)";
+                metrics.className = "text-xs text-emerald-800 mt-0.5";
+                simLabel.textContent = "Reset to Live Data";
+            } else {
+                const curAqi = parseInt(document.getElementById('currentAqi')?.textContent) || 142;
+                bar.className = "mb-4 p-3.5 bg-amber-50/80 border border-amber-200 rounded-2xl shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3";
+                iconContainer.className = "w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0";
+                icon.className = "ph-bold ph-door text-2xl";
+                badge.className = "text-[10px] font-extrabold bg-amber-200 text-amber-900 px-2 py-0.5 rounded-full";
+                badge.textContent = "CLOSE";
+                headline.textContent = "Close windows to maintain air quality";
+                headline.className = "text-sm font-extrabold text-amber-950 mt-0.5";
+                metrics.textContent = `Outdoor: AQI ${curAqi} • 62% RH | Indoor: AQI 45 • 49% RH (Protect indoor air from outdoor particulate ingress)`;
+                metrics.className = "text-xs text-amber-800/90 mt-0.5";
+                simLabel.textContent = "Simulate Fresh Air";
+            }
+        }
+
+        function toggleSmartWindowSimulation() {
+            smartWindowSimFresh = !smartWindowSimFresh;
+            updateSmartWindowUI();
+        }
+
+        // --- 5-Day Pollen Forecast Mock Service ---
+        let currentPollenDayIndex = 0;
+
+        function getPollenCityProfile(cityName) {
+            const isDelhi = cityName.includes("Delhi") || cityName.includes("Noida") || cityName.includes("Gurugram");
+            const isBengaluru = cityName.includes("Bengaluru") || cityName.includes("Mysuru");
+            const isCoastal = cityName.includes("Mumbai") || cityName.includes("Chennai") || cityName.includes("Kochi");
+
+            const indices = isBengaluru ? [8, 7, 9, 8, 6] : isDelhi ? [7, 8, 8, 7, 6] : isCoastal ? [5, 6, 5, 4, 5] : [4, 5, 6, 5, 4];
+            const dominant = isBengaluru ? "Tree Pollen (Gulmohar & Acacia)" : isDelhi ? "Weed Pollen (Parthenium)" : isCoastal ? "Mold Spores & Fungi" : "Grass & Parthenium Weed";
+            const advice = isBengaluru ? "Bengaluru tree canopy bio-aerosols active. Avoid early jogging in dense gardens." :
+                           isDelhi ? "Parthenium weed and roadside dust bio-aerosols active. Wear wrap-around glasses." :
+                           isCoastal ? "Coastal mold spores elevated. Maintain room humidity under 55%." :
+                           "Moderate seasonal weed pollen in Central India. Keep vehicle windows closed on highways.";
+
+            const days = [];
+            const date = new Date();
+
+            for (let i = 0; i < 5; i++) {
+                const d = new Date();
+                d.setDate(date.getDate() + i);
+                const dayLabel = i === 0 ? "Today" : i === 1 ? "Tomorrow" : d.toLocaleDateString('en-US', { weekday: 'short' });
+                const dateLabel = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                const idx = indices[i];
+                const risk = idx <= 2 ? "Low" : idx <= 5 ? "Moderate" : idx <= 8 ? "High" : "Very High";
+                const riskColor = idx <= 2 ? "text-emerald-700 bg-emerald-100 border-emerald-200" :
+                                  idx <= 5 ? "text-amber-800 bg-amber-100 border-amber-200" :
+                                  idx <= 8 ? "text-orange-800 bg-orange-100 border-orange-200" :
+                                  "text-red-800 bg-red-100 border-red-200";
+
+                days.push({
+                    dayLabel,
+                    dateLabel,
+                    index: idx,
+                    risk,
+                    riskColor,
+                    dominant,
+                    tree: isBengaluru ? Math.min(95, idx * 10) : Math.min(75, idx * 6),
+                    grass: Math.min(80, idx * 7),
+                    weed: isDelhi ? Math.min(95, idx * 11) : Math.min(70, idx * 6),
+                    advisory: idx >= 7 ? "High allergen load! Wear N95 respirator and rinse eyes after outdoor trips." :
+                              idx >= 4 ? "Moderate pollen count. Asthmatic users should keep inhalers handy." :
+                              "Low allergen levels. Ideal conditions for outdoor ventilation."
+                });
+            }
+            return { days, dominant, advice };
+        }
+
+        function renderPollenForecast(cityName) {
+            const activeCity = cityName || (panIndiaCityData[currentCityId]?.name || "Durg, Chhattisgarh");
+            const data = getPollenCityProfile(activeCity);
+            const container = document.getElementById('pollenDaysGrid');
+            const badge = document.getElementById('pollenTodayBadge');
+            const cityBadge = document.getElementById('pollenCityBadge');
+
+            if (!container) return;
+
+            if (cityBadge) cityBadge.textContent = activeCity.split(',')[0];
+            if (badge) {
+                const t = data.days[0];
+                badge.innerHTML = `<span class="w-2 h-2 rounded-full ${t.index >= 7 ? 'bg-orange-500' : 'bg-amber-500'} mr-1.5"></span> Today: ${t.risk} (${t.index}/12)`;
+            }
+
+            container.innerHTML = "";
+            data.days.forEach((day, i) => {
+                const isSelected = i === currentPollenDayIndex;
+                const col = document.createElement('div');
+                col.className = `p-2.5 rounded-xl border text-center cursor-pointer transition-all ${isSelected ? 'bg-blue-50 border-blue-400 ring-2 ring-blue-500/20 shadow-xs' : 'bg-white border-slate-200 hover:border-slate-300'}`;
+                col.onclick = () => {
+                    currentPollenDayIndex = i;
+                    renderPollenForecast(activeCity);
+                };
+                col.innerHTML = `
+                    <span class="block text-xs font-bold ${isSelected ? 'text-blue-900' : 'text-slate-800'}">${day.dayLabel}</span>
+                    <span class="block text-[10px] text-slate-400">${day.dateLabel}</span>
+                    <div class="my-1.5 w-6 h-6 mx-auto rounded-full flex items-center justify-center font-extrabold text-xs ${day.index >= 7 ? 'bg-orange-100 text-orange-800' : day.index >= 4 ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}">
+                        ${day.index}
+                    </div>
+                    <span class="text-[9px] font-bold block ${day.index >= 7 ? 'text-orange-700' : day.index >= 4 ? 'text-amber-700' : 'text-emerald-700'}">${day.risk}</span>
+                `;
+                container.appendChild(col);
+            });
+
+            const activeDay = data.days[currentPollenDayIndex] || data.days[0];
+            if (document.getElementById('pollenSelectedDayLabel')) document.getElementById('pollenSelectedDayLabel').textContent = activeDay.dayLabel;
+            if (document.getElementById('pollenDominantPill')) document.getElementById('pollenDominantPill').textContent = "Dominant: " + activeDay.dominant;
+            if (document.getElementById('pollenTreeVal')) document.getElementById('pollenTreeVal').textContent = activeDay.tree + "%";
+            if (document.getElementById('pollenTreeBar')) document.getElementById('pollenTreeBar').style.width = activeDay.tree + "%";
+            if (document.getElementById('pollenGrassVal')) document.getElementById('pollenGrassVal').textContent = activeDay.grass + "%";
+            if (document.getElementById('pollenGrassBar')) document.getElementById('pollenGrassBar').style.width = activeDay.grass + "%";
+            if (document.getElementById('pollenWeedVal')) document.getElementById('pollenWeedVal').textContent = activeDay.weed + "%";
+            if (document.getElementById('pollenWeedBar')) document.getElementById('pollenWeedBar').style.width = activeDay.weed + "%";
+            if (document.getElementById('pollenAdvisoryText')) document.getElementById('pollenAdvisoryText').textContent = activeDay.advisory + " " + data.advice;
+        }
+
+        function refreshData() {
+            updateTime();
+            initChart();
+            updateSmartWindowUI();
+            updatePurifierUI();
+            renderPollenForecast();
+            const aqi = parseInt(document.getElementById('currentAqi').textContent) || 142;
+            checkAqiThreshold(aqi);
+        }
+
+        // --- Threshold-Based Alert System (AQI > 150) ---
+        const AQI_ALERT_THRESHOLD = 150;
+        let lastAlertTimestamp = 0;
+
+        function updateNotificationButtonUI() {
+            const btnText = document.getElementById('notifyBtnText');
+            const btn = document.getElementById('notifyPermissionBtn');
+            if (!("Notification" in window)) {
+                if (btnText) btnText.textContent = "Alerts Unsupported";
+                return;
+            }
+            if (Notification.permission === "granted") {
+                if (btnText) btnText.textContent = "Alerts Active (>150)";
+                if (btn) btn.className = "px-3.5 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold rounded-xl transition-colors flex items-center";
+            } else if (Notification.permission === "denied") {
+                if (btnText) btnText.textContent = "Alerts Blocked in Browser";
+            } else {
+                if (btnText) btnText.textContent = "Enable Browser Alerts";
+            }
+        }
+
+        function toggleNotificationPermission() {
+            if (!("Notification" in window)) {
+                alert("Browser notifications are not supported in this environment.");
+                return;
+            }
+            Notification.requestPermission().then(permission => {
+                updateNotificationButtonUI();
+                if (permission === "granted") {
+                    try {
+                        new Notification("AeroGuard Threshold Alert Active", {
+                            body: "Automated alerts enabled. You will be notified whenever local Durg AQI levels exceed 150.",
+                            icon: "https://cdn-icons-png.flaticon.com/512/3208/3208722.png"
+                        });
+                    } catch (e) {}
+                    const currentAqi = parseInt(document.getElementById('currentAqi').textContent) || 142;
+                    checkAqiThreshold(currentAqi);
+                }
+            });
+        }
+
+        function checkAqiThreshold(aqi) {
+            const banner = document.getElementById('highAqiWarningBanner');
+            const warningText = document.getElementById('highAqiWarningText');
+            
+            if (aqi > AQI_ALERT_THRESHOLD) {
+                if (banner) {
+                    banner.classList.remove('hidden');
+                    if (warningText) {
+                        warningText.textContent = `Current sensor indicates unhealthy pollution level of AQI ${aqi} (Threshold: 150). High PM2.5 detected. N95 masks mandatory outdoors.`;
+                    }
+                }
+                dispatchBrowserAlert(aqi);
+            } else {
+                if (banner) banner.classList.add('hidden');
+            }
+        }
+
+        function dispatchBrowserAlert(aqi) {
+            const now = Date.now();
+            if (now - lastAlertTimestamp < 15000) return; // 15-second debounce
+            lastAlertTimestamp = now;
+
+            const title = "⚠️ High Pollution Alert: AQI Exceeded 150!";
+            const body = `Durg air quality alert: Current AQI is ${aqi} (Unhealthy/Poor). PM2.5 levels exceed safe limits. Sensitive groups must wear N95 respirators.`;
+
+            if ("Notification" in window && Notification.permission === "granted") {
+                try {
+                    new Notification(title, {
+                        body: body,
+                        icon: "https://cdn-icons-png.flaticon.com/512/3208/3208722.png",
+                        tag: "aqi-threshold-150"
+                    });
+                } catch (e) {
+                    console.warn("Notification dispatch notice:", e);
+                }
+            }
+        }
+
+        function dismissWarningBanner() {
+            const banner = document.getElementById('highAqiWarningBanner');
+            if (banner) banner.classList.add('hidden');
+        }
+
+        function simulateSensorSpike() {
+            const spikeAqi = 168; // Exceeds 150 threshold
+            document.getElementById('currentAqi').textContent = spikeAqi;
+            document.getElementById('currentAqi').className = "text-5xl font-extrabold text-red-500";
+            document.getElementById('aqiBadge').textContent = "Poor / Unhealthy (>150)";
+            document.getElementById('aqiBadge').className = "inline-block px-3.5 py-1 rounded-full bg-red-100 text-red-800 font-bold text-xs border border-red-200";
+            document.getElementById('aqiSummary').textContent = "Everyone may begin to experience health effects; sensitive groups should avoid outdoor exertion.";
+            document.getElementById('valPm25').textContent = "68.5";
+
+            if ("Notification" in window && Notification.permission !== "granted") {
+                Notification.requestPermission().then(() => {
+                    updateNotificationButtonUI();
+                    checkAqiThreshold(spikeAqi);
+                });
+            } else {
+                checkAqiThreshold(spikeAqi);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            initChart();
+            updateNotificationButtonUI();
+            const initialAqi = parseInt(document.getElementById('currentAqi').textContent) || 142;
+            checkAqiThreshold(initialAqi);
+
+            const form = document.getElementById('reportForm');
+            const successMsg = document.getElementById('successMessage');
+            const resetBtn = document.getElementById('resetFormBtn');
+
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const submitBtn = form.querySelector('button[type="submit"]');
+                const originalHtml = submitBtn.innerHTML;
+                submitBtn.innerHTML = '<i class="ph ph-spinner animate-spin mr-2"></i> Submitting...';
+                submitBtn.disabled = true;
+
+                setTimeout(() => {
+                    const source = document.getElementById('sourceType').value;
+                    const loc = document.getElementById('location').value;
+                    const desc = document.getElementById('description').value || 'Reported by local resident.';
+
+                    // Prepend to community feed
+                    const feed = document.getElementById('communityFeed');
+                    const newCard = document.createElement('div');
+                    newCard.className = 'p-3 bg-blue-50/50 rounded-xl border border-blue-200 flex justify-between items-start';
+                    newCard.innerHTML = `
+                        <div>
+                            <div class="flex items-center space-x-2">
+                                <span class="px-2 py-0.5 text-[10px] font-bold bg-blue-100 text-blue-700 rounded-full">${source}</span>
+                                <span class="text-xs font-semibold text-slate-800">${loc}</span>
+                            </div>
+                            <p class="text-xs text-slate-500 mt-1">${desc}</p>
+                            <span class="text-[10px] text-slate-400 mt-1 block">Just now • Reported by You</span>
+                        </div>
+                        <span class="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">Under Review</span>
+                    `;
+                    feed.prepend(newCard);
+
+                    form.classList.add('hidden');
+                    successMsg.classList.remove('hidden');
+                    successMsg.classList.add('flex');
+                    submitBtn.innerHTML = originalHtml;
+                    submitBtn.disabled = false;
+                    form.reset();
+                }, 600);
+            });
+
+            resetBtn.addEventListener('click', function() {
+                successMsg.classList.add('hidden');
+                successMsg.classList.remove('flex');
+                form.classList.remove('hidden');
+            });
+        });
+
+        // Health Advisory Modal logic with simulated Gemini call
+        let currentSelectedProfile = 'asthma';
+
+        function openHealthModal() {
+            document.getElementById('healthModalOverlay').classList.remove('hidden');
+            document.getElementById('healthModalOverlay').classList.add('flex');
+            
+            // Check if profile was saved in local storage
+            const rememberCheckbox = document.getElementById('rememberProfileCheckbox');
+            const savedRemember = localStorage.getItem('aeroguard_remember_profile') === 'true';
+            const savedProfile = localStorage.getItem('aeroguard_saved_profile') || 'asthma';
+
+            rememberCheckbox.checked = savedRemember;
+            if (savedRemember && savedProfile) {
+                currentSelectedProfile = savedProfile;
+            }
+            updateProfileChipStyles(currentSelectedProfile);
+            simulateGeminiAdvice(currentSelectedProfile);
+        }
+
+        function closeHealthModal() {
+            document.getElementById('healthModalOverlay').classList.add('hidden');
+            document.getElementById('healthModalOverlay').classList.remove('flex');
+        }
+
+        function toggleRememberProfile(checked) {
+            localStorage.setItem('aeroguard_remember_profile', checked ? 'true' : 'false');
+            if (checked) {
+                localStorage.setItem('aeroguard_saved_profile', currentSelectedProfile);
+            }
+        }
+
+        function selectProfile(profile) {
+            currentSelectedProfile = profile;
+            const remember = document.getElementById('rememberProfileCheckbox').checked;
+            if (remember) {
+                localStorage.setItem('aeroguard_saved_profile', profile);
+            }
+            updateProfileChipStyles(profile);
+            simulateGeminiAdvice(profile);
+        }
+
+        function updateProfileChipStyles(activeProfile) {
+            const chips = ['asthma', 'children', 'elderly', 'general'];
+            chips.forEach(id => {
+                const btn = document.getElementById('chip_' + id);
+                if (btn) {
+                    if (id === activeProfile) {
+                        btn.className = 'px-3 py-1 text-xs font-semibold rounded-full bg-blue-600 text-white shadow-sm transition-colors';
+                    } else {
+                        btn.className = 'px-3 py-1 text-xs font-semibold rounded-full bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors';
+                    }
+                }
+            });
+        }
+
+        function simulateGeminiAdvice(profile) {
+            const loader = document.getElementById('geminiLoader');
+            const content = document.getElementById('geminiAdviceContent');
+            
+            loader.classList.remove('hidden');
+            content.classList.add('hidden');
+
+            setTimeout(() => {
+                loader.classList.add('hidden');
+                content.classList.remove('hidden');
+                
+                // Specific recommendations based on profile
+                if (profile === 'asthma') {
+                    document.getElementById('advMask').textContent = "Strictly wear a certified N95 or KN95 respirator outdoors. Fine PM2.5 (54.2 µg/m³) directly inflames lower bronchioles.";
+                    document.getElementById('advWorkout').textContent = "Restrict cardio to early mornings (5:30 AM - 7:00 AM). Avoid evening outdoor exertion as temperature inversion traps smoke.";
+                    document.getElementById('advIndoor').textContent = "Operate True HEPA air purifier on medium/high speed. Ensure room perimeter is sealed during morning rush hour.";
+                    document.getElementById('advClinical').textContent = "Gemini Clinical Synthesis: High hyper-reactivity risk. Keep beta-agonist rescue inhaler accessible; do not perform strenuous tasks near NH-53.";
+                } else if (profile === 'children') {
+                    document.getElementById('advMask').textContent = "Children should wear well-fitted child-size N95/KF94 masks during school commutes.";
+                    document.getElementById('advWorkout').textContent = "School recess should be shifted to indoor sports complexes or well-ventilated halls.";
+                    document.getElementById('advIndoor').textContent = "Keep children's bedrooms dust-free with damp microfiber mopping; avoid dry sweeping.";
+                    document.getElementById('advClinical').textContent = "Gemini Pediatric Synthesis: Developing lungs absorb up to 30% more particulate volume per body weight. Minimize road-facing outdoor exposure.";
+                } else if (profile === 'elderly') {
+                    document.getElementById('advMask').textContent = "N95 mask recommended even for short walks outside near Padmanabhpur residential roads.";
+                    document.getElementById('advWorkout').textContent = "Light walking permitted only in green parks (like Maitri Bagh) after 9:30 AM when solar heat disperses ground fog.";
+                    document.getElementById('advIndoor').textContent = "Maintain steady indoor hydration and keep windows shut between 7 PM - 10 PM.";
+                    document.getElementById('advClinical').textContent = "Gemini Geriatric Synthesis: Elevated cardiovascular strain risk. Monitor blood pressure and respiratory ease continuously.";
+                } else {
+                    document.getElementById('advMask').textContent = "N95 recommended for sensitive individuals or if outdoors longer than 45 minutes.";
+                    document.getElementById('advWorkout').textContent = "Jogging or cycling is safest between 5:30 AM - 7:00 AM before heavy vehicular and industrial peak emissions.";
+                    document.getElementById('advIndoor').textContent = "Ventilate home during noon (12:00 PM - 3:00 PM) when atmospheric mixing layer is highest.";
+                    document.getElementById('advClinical').textContent = "Gemini General Synthesis: Moderate air quality requires precautionary protection against cumulative particulate load.";
+                }
+            }, 500);
+        }
+
+        function shareHealthAdvisory() {
+            const clinical = document.getElementById('advClinical').textContent;
+            const mask = document.getElementById('advMask').textContent;
+            const workout = document.getElementById('advWorkout').textContent;
+            const indoor = document.getElementById('advIndoor').textContent;
+            
+            const shareText = `🛡️ AeroGuard Health Advisory (Durg, CG - AQI 142 Moderate/Poor)\n` +
+                              `👤 Profile: ${currentSelectedProfile.toUpperCase()}\n\n` +
+                              `😷 Mask: ${mask}\n\n` +
+                              `🏃 Exercise Window: ${workout}\n\n` +
+                              `🏠 Indoor Strategy: ${indoor}\n\n` +
+                              `💡 AI Synthesis: ${clinical}\n\n` +
+                              `Stay informed with AeroGuard!`;
+
+            if (navigator.share) {
+                navigator.share({
+                    title: 'AeroGuard Health Advisory',
+                    text: shareText
+                }).catch(() => {});
+            } else {
+                navigator.clipboard.writeText(shareText).then(() => {
+                    const btn = document.getElementById('shareAdvisoryBtn');
+                    const orig = btn.innerHTML;
+                    btn.innerHTML = '<i class="ph-bold ph-check mr-1.5 text-emerald-400"></i> Copied to Clipboard!';
+                    setTimeout(() => { btn.innerHTML = orig; }, 2000);
+                });
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            refreshData();
+            updateSmartWindowUI();
+            updatePurifierUI();
+            renderPollenForecast();
+            renderHistoricalUI();
+            updateNotificationButtonUI();
+        });
+    </script>
+
+    <!-- Toggleable Personalized Health Advisory Modal -->
+    <div id="healthModalOverlay" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 relative max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <div class="flex items-center space-x-2.5">
+                    <div class="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-md shadow-blue-500/20">
+                        <i class="ph-bold ph-sparkle text-lg"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-base font-bold text-slate-900">Personalized Health Advisory</h2>
+                        <span class="text-xs text-slate-500">Simulated Gemini AI for AQI 142 (Moderate/Poor)</span>
+                    </div>
+                </div>
+                <button onclick="closeHealthModal()" class="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-500 transition-colors">
+                    <i class="ph-bold ph-x text-lg"></i>
+                </button>
+            </div>
+
+            <!-- Profile selector pills -->
+            <div class="mb-3">
+                <label class="text-xs font-semibold text-slate-600 block mb-1.5">Select Demographic Profile:</label>
+                <div class="flex flex-wrap gap-1.5">
+                    <button id="chip_asthma" onclick="selectProfile('asthma')" class="px-3 py-1 text-xs font-semibold rounded-full bg-blue-600 text-white transition-colors">
+                        Asthma / Respiratory
+                    </button>
+                    <button id="chip_children" onclick="selectProfile('children')" class="px-3 py-1 text-xs font-semibold rounded-full bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors">
+                        Children (<12y)
+                    </button>
+                    <button id="chip_elderly" onclick="selectProfile('elderly')" class="px-3 py-1 text-xs font-semibold rounded-full bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors">
+                        Elderly (60+)
+                    </button>
+                    <button id="chip_general" onclick="selectProfile('general')" class="px-3 py-1 text-xs font-semibold rounded-full bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors">
+                        General Public
+                    </button>
+                </div>
+            </div>
+
+            <!-- Remember my profile checkbox -->
+            <div class="mb-4 flex items-center space-x-2 bg-slate-50 px-3 py-2 rounded-xl border border-slate-200">
+                <input type="checkbox" id="rememberProfileCheckbox" onchange="toggleRememberProfile(this.checked)" class="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer">
+                <label for="rememberProfileCheckbox" class="text-xs text-slate-600 font-medium cursor-pointer select-none">
+                    Remember my profile for future sessions
+                </label>
+            </div>
+
+            <!-- Loader state -->
+            <div id="geminiLoader" class="hidden py-10 flex flex-col items-center justify-center text-center">
+                <i class="ph ph-spinner animate-spin text-3xl text-blue-600 mb-2"></i>
+                <p class="text-xs font-semibold text-slate-600">Gemini is synthesizing medical recommendations for Durg...</p>
+            </div>
+
+            <!-- Advice Content -->
+            <div id="geminiAdviceContent" class="space-y-3.5">
+                <div class="p-3 bg-blue-50/80 rounded-2xl border border-blue-100">
+                    <div class="flex items-center space-x-1.5 text-blue-800 text-xs font-bold mb-1">
+                        <i class="ph-fill ph-brain"></i>
+                        <span>AI Clinical Synthesis</span>
+                    </div>
+                    <p id="advClinical" class="text-xs text-blue-900 leading-relaxed"></p>
+                </div>
+
+                <div class="p-3 bg-slate-50 rounded-2xl border border-slate-200">
+                    <div class="flex items-center space-x-1.5 text-slate-800 text-xs font-bold mb-1">
+                        <i class="ph-fill ph-mask-happy text-red-500 text-sm"></i>
+                        <span>Mask Guidance (PM2.5: 54.2 µg/m³)</span>
+                    </div>
+                    <p id="advMask" class="text-xs text-slate-600 leading-relaxed"></p>
+                </div>
+
+                <div class="p-3 bg-slate-50 rounded-2xl border border-slate-200">
+                    <div class="flex items-center space-x-1.5 text-slate-800 text-xs font-bold mb-1">
+                        <i class="ph-fill ph-sneaker-move text-emerald-500 text-sm"></i>
+                        <span>Outdoor Workout Window</span>
+                    </div>
+                    <p id="advWorkout" class="text-xs text-slate-600 leading-relaxed"></p>
+                </div>
+
+                <div class="p-3 bg-slate-50 rounded-2xl border border-slate-200">
+                    <div class="flex items-center space-x-1.5 text-slate-800 text-xs font-bold mb-1">
+                        <i class="ph-fill ph-wind text-blue-500 text-sm"></i>
+                        <span>Indoor Air & Ventilation</span>
+                    </div>
+                    <p id="advIndoor" class="text-xs text-slate-600 leading-relaxed"></p>
+                </div>
+            </div>
+
+            <!-- Footer actions with Share Advisory button -->
+            <div class="mt-5 pt-3.5 border-t border-slate-100 flex flex-col sm:flex-row gap-2 justify-between items-center">
+                <button id="shareAdvisoryBtn" onclick="shareHealthAdvisory()" class="w-full sm:w-auto px-4 py-2.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-bold rounded-xl transition-all flex items-center justify-center shadow-sm shadow-blue-500/20">
+                    <i class="ph-bold ph-share-network mr-1.5 text-sm"></i> Share Advisory
+                </button>
+                <div class="flex space-x-2 w-full sm:w-auto justify-end">
+                    <button onclick="simulateGeminiAdvice(currentSelectedProfile)" class="flex-1 sm:flex-initial px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition-colors flex items-center justify-center">
+                        <i class="ph ph-arrows-clockwise mr-1"></i> Re-run
+                    </button>
+                    <button onclick="closeHealthModal()" class="flex-1 sm:flex-initial px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-colors">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
